@@ -1,0 +1,30 @@
+{
+  "name": "@chaniiii/contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Cross-Chain AI Dungeon Crawler",
+  "private": true,
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "dev": "forge test --watch",
+    "deploy": "forge script script/Deploy.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast",
+    "deploy:local": "forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast",
+    "clean": "forge clean",
+    "lint": "forge fmt --check",
+    "format": "forge fmt",
+    "coverage": "forge coverage",
+    "gas-report": "forge test --gas-report",
+    "install:libs": "forge install",
+    "update:libs": "forge update"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "keywords": [
+    "solidity",
+    "smart-contracts",
+    "blockchain",
+    "chainlink",
+    "cross-chain",
+    "foundry"
+  ]
+}

@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id          String   @id @default(cuid())
+  wallet      String   @unique
+  username    String?
+  level       Int      @default(1)
+  experience  Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  parties      PartyMember[]
+  equipment    Equipment[]
+  gameStats    GameStats?
+  aiInteractions AIInteraction[]
+
+  @@map("players")
+}
+
+model Party {
+  id          String   @id @default(cuid())
+  name        String?
+  maxSize     Int      @default(4)
+  chainId     Int
+  isActive    Boolean  @default(true)
+  dungeonSeed String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  members     PartyMember[]
+  dungeonRuns DungeonRun[]
+
+  @@map("parties")
+}
+
+model PartyMember {
+  id       String @id @default(cuid())
+  playerId String
+  partyId  String
+  role     String? // tank, dps, healer, support
+  isLeader Boolean @default(false)
+  joinedAt DateTime @default(now())
+
+  // Relationships
+  player   Player @relation(fields: [playerId], references: [id])
+  party    Party  @relation(fields: [partyId], references: [id])
+
+  @@unique([playerId, partyId])
+  @@map("party_members")
+}
+
+model Equipment {
+  id            String   @id @default(cuid())
+  tokenId       String   @unique
+  name          String
+  equipmentType String   // weapon, armor, accessory, consumable
+  rarity        String   // common, rare, epic, legendary
+  attackPower   Int      @default(0)
+  defensePower  Int      @default(0)
+  magicPower    Int      @default(0)
+  specialAbility String?
+  isLendable    Boolean  @default(false)
+  lendingPrice  String?  // BigInt as string
+  ownerId       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  owner         Player @relation(fields: [ownerId], references: [id])
+  lendingOrders LendingOrder[]
+
+  @@map("equipment")
+}
+
+model LendingOrder {
+  id          String   @id @default(cuid())
+  equipmentId String
+  borrowerId  String?
+  lenderId    String
+  price       String   // BigInt as string
+  collateral  String   // BigInt as string
+  duration    Int      // in hours
+  status      String   // active, completed, defaulted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  expiresAt   DateTime
+
+  // Relationships
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@map("lending_orders")
+}
+
+model DungeonRun {
+  id          String   @id @default(cuid())
+  partyId     String
+  level       Int
+  seed        String
+  status      String   // active, completed, failed
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  lootCount   Int      @default(0)
+  experience  Int      @default(0)
+
+  // Relationships
+  party       Party @relation(fields: [partyId], references: [id])
+
+  @@map("dungeon_runs")
+}
+
+model GameStats {
+  id              String @id @default(cuid())
+  playerId        String @unique
+  dungeonsCleared Int    @default(0)
+  totalLoot       Int    @default(0)
+  totalExperience Int    @default(0)
+  highestLevel    Int    @default(1)
+  gamesPlayed     Int    @default(0)
+
+  // Relationships
+  player          Player @relation(fields: [playerId], references: [id])
+
+  @@map("game_stats")
+}
+
+model AIInteraction {
+  id          String   @id @default(cuid())
+  playerId    String
+  npcName     String
+  interaction String   // dialogue, quest, trade, etc.
+  context     String   // game state context as JSON string
+  response    String
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  player      Player @relation(fields: [playerId], references: [id])
+
+  @@map("ai_interactions")
+}

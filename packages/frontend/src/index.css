@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* Custom game-specific styles */
+.game-card {
+  background: rgba(31, 41, 55, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(107, 114, 128, 1);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.game-card:hover {
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.25);
+}
+
+.game-button {
+  background-color: rgb(147, 51, 234);
+  color: white;
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.game-button:hover {
+  background-color: rgb(126, 34, 206);
+}
+
+.game-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.game-button-secondary {
+  background-color: transparent;
+  border: 2px solid rgb(147, 51, 234);
+  color: rgb(147, 51, 234);
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.game-button-secondary:hover {
+  background-color: rgb(147, 51, 234);
+  color: white;
+}
+
+.game-button-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+}

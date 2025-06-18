@@ -1,0 +1,57 @@
+{
+  "name": "cross-chain-ai-dungeon-crawler",
+  "version": "1.0.0",
+  "description": "Cross-Chain AI Dungeon Crawler - A blockchain-based multiplayer game with cross-chain party formation, AI-powered NPCs, and DeFi equipment lending",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:contracts\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:contracts": "cd packages/contracts && npm run dev",
+    "dev:backend": "cd packages/backend && npm run dev",
+    "dev:frontend": "cd packages/frontend && npm run dev",
+    "test": "npm run test:contracts && npm run test:backend && npm run test:frontend",
+    "test:contracts": "cd packages/contracts && npm test",
+    "test:backend": "cd packages/backend && npm test",
+    "test:frontend": "cd packages/frontend && npm test",
+    "build": "npm run build:contracts && npm run build:backend && npm run build:frontend",
+    "build:contracts": "cd packages/contracts && npm run build",
+    "build:backend": "cd packages/backend && npm run build",
+    "build:frontend": "cd packages/frontend && npm run build",
+    "deploy:contracts": "cd packages/contracts && npm run deploy",
+    "deploy:backend": "cd packages/backend && npm run deploy",
+    "deploy:frontend": "cd packages/frontend && npm run deploy",
+    "clean": "npm run clean:contracts && npm run clean:backend && npm run clean:frontend",
+    "clean:contracts": "cd packages/contracts && npm run clean",
+    "clean:backend": "cd packages/backend && npm run clean",
+    "clean:frontend": "cd packages/frontend && npm run clean",
+    "install:all": "npm install && npm run install:contracts && npm run install:backend && npm run install:frontend",
+    "install:contracts": "cd packages/contracts && npm install",
+    "install:backend": "cd packages/backend && npm install",
+    "install:frontend": "cd packages/frontend && npm install"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "blockchain",
+    "chainlink",
+    "cross-chain",
+    "ai",
+    "gaming",
+    "defi",
+    "nft",
+    "ethereum",
+    "polygon",
+    "arbitrum"
+  ],
+  "author": "Chaniiii Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chaniiii/cross-chain-ai-dungeon-crawler"
+  }
+}
