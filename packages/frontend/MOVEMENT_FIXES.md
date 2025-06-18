@@ -1,94 +1,89 @@
-# Player Movement Fixes - Enhanced2DScene
+# Enhanced Interactive Mode Improvements
 
-## Issues Identified and Fixed:
+## Latest Updates (Minimap & Combat System)
 
-### 1. **Improper Movement Logic**
-- **Problem**: The original code used `else if` statements for movement, preventing diagonal movement
-- **Fix**: Changed to separate if statements for each direction, allowing simultaneous key presses
+### **Minimap System - FIXED** ✅
+- **Problem**: Minimap was empty and showed nothing
+- **Solution**: 
+  - Added `createMiniMap()` method that draws the actual world layout
+  - Added `updateMiniMap()` method for real-time updates
+  - Shows walls (gray), player (green dot), enemies (red dots), and loot (yellow dots)
+  - Properly scaled to represent the actual game world (1600x1200)
+  - Updates every 200ms for smooth performance
 
-### 2. **Poor Velocity Handling**
-- **Problem**: Direct velocity setting without normalization caused jerky diagonal movement
-- **Fix**: Implemented proper diagonal movement normalization (speed * 0.707 for √2/2)
+### **Combat System - ENHANCED** ✅
+- **Problem**: Combat was too simple - enemies died instantly on contact
+- **Solution**:
+  - **Enemy Health System**: Enemies now have 30 HP and take multiple hits to defeat
+  - **Health Bars**: Visual health bars above enemies showing current health
+  - **Turn-Based Combat**: Combat has cooldowns and structured turns
+  - **Counter-Attacks**: Enemies fight back and deal damage to player
+  - **Damage Text**: Floating damage numbers show combat feedback
+  - **Knockback**: Player gets pushed away during combat to prevent sticking
+  - **Screen Effects**: Camera shake, color flashes, and visual feedback
+  - **Game Over**: Player can die and restart with 'R' key
 
-### 3. **Inadequate Physics Configuration**
-- **Problem**: High drag and max velocity values caused sluggish movement
-- **Fix**: 
-  - Increased drag from 500 to 800 for better control
-  - Reduced max velocity from 200 to 160 for more manageable speed
-  - Set consistent physics FPS to 60
+### **Enhanced Visual Feedback**
+- **Damage Numbers**: Shows `-15` to `-25` damage when attacking enemies
+- **Combat States**: Enemies show "DEFEATED!" when killed
+- **Health Bar Colors**: Green → Yellow → Red based on enemy health
+- **Player Damage**: Red flash and screen shake when taking damage
+- **Level Up Effects**: Animated "LEVEL UP!" text when gaining levels
 
-### 4. **Collision Detection Issues**
-- **Problem**: Default collision boxes were too large, causing stuck movement
-- **Fix**: Set proper collision body size (24x24) for player and enemies
+### **Improved Game Balance**
+- **Enemy Stats**: 30 HP, 15 damage per attack
+- **Combat Cooldowns**: 1-second cooldown between combat interactions
+- **Player Knockback**: Prevents getting stuck on enemies during combat
+- **Turn Timing**: 500ms delay for enemy counter-attacks
+- **Combat Resolution**: 1.5-second combat state duration
 
-### 5. **Combat System Interference**
-- **Problem**: Player could get stuck when touching enemies
-- **Fix**: 
-  - Added combat state prevention (inCombat flag)
-  - Implemented knockback effect to push player away from enemies
-  - Added visual feedback with damage flash
+### **Debug Features**
+- **F1 Debug Mode**: Shows player position, velocity, health, enemies count
+- **Combat Debugging**: Shows combat cooldown status
+- **Performance Monitoring**: Real-time game state information
 
-### 6. **Input System Improvements**
-- **Problem**: Inconsistent key handling
-- **Fix**: 
-  - Added proper TypeScript typing for WASD keys
-  - Added null assertion operators for keyboard input
-  - Improved key state checking
+## Key Features Now Working:
 
-### 7. **User Experience Enhancements**
-- **Added**: Control instructions overlay
-- **Added**: Debug mode (F1 key) for troubleshooting
-- **Added**: Better UI with health/mana labels
-- **Added**: Visual feedback for all interactions
+### **Minimap** 📍
+- Real-time world representation
+- Player position (green dot)
+- Enemy positions (red dots)
+- Loot positions (yellow dots)
+- Wall layout (gray pixels)
+- Proper scaling and borders
 
-## Key Changes in Update Method:
+### **Interactive Combat** ⚔️
+- Multi-hit enemy system
+- Visual health bars
+- Turn-based mechanics
+- Counter-attacks
+- Damage feedback
+- Death animations
+- Game over screen
 
-```typescript
-update() {
-  const speed = 140;
-  let velocityX = 0;
-  let velocityY = 0;
-  
-  // Separate checks for each direction (allows diagonal)
-  if (this.cursors.left.isDown || this.wasd.A.isDown) {
-    velocityX = -speed;
-  }
-  if (this.cursors.right.isDown || this.wasd.D.isDown) {
-    velocityX = speed;
-  }
-  if (this.cursors.up.isDown || this.wasd.W.isDown) {
-    velocityY = -speed;
-  }
-  if (this.cursors.down.isDown || this.wasd.S.isDown) {
-    velocityY = speed;
-  }
-  
-  // Normalize diagonal movement
-  if (velocityX !== 0 && velocityY !== 0) {
-    const diagonal = speed * 0.707;
-    velocityX = velocityX > 0 ? diagonal : -diagonal;
-    velocityY = velocityY > 0 ? diagonal : -diagonal;
-  }
-  
-  // Apply velocity once
-  this.player.setVelocity(velocityX, velocityY);
-}
-```
+### **Smooth Movement** 🎮
+- 8-directional movement
+- Diagonal normalization
+- No sticking or jittery motion
+- Proper collision detection
+- Responsive controls
 
 ## Testing Instructions:
 
-1. Navigate to the game in browser (localhost:5174)
-2. Switch to "Interactive Mode" 
-3. Use WASD or Arrow keys to move
-4. Press F1 to toggle debug information
-5. Test diagonal movement by pressing two keys simultaneously
-6. Verify smooth movement without getting stuck
+1. **Navigate to Interactive Mode**: Switch from Classic to Interactive mode
+2. **Test Movement**: Use WASD or arrow keys - should be smooth in all directions
+3. **Test Combat**: Run into enemies - should see health bars and damage numbers
+4. **Test Minimap**: Check top-right corner - should show live world representation
+5. **Test Debug**: Press F1 to toggle debug information
+6. **Test Game Over**: Let enemies kill you, then press R to restart
 
-## Expected Behavior:
+## Visual Indicators:
 
-- ✅ Smooth 8-directional movement
-- ✅ No sticking or jerky motion
-- ✅ Proper diagonal speed normalization
-- ✅ Responsive controls with good feel
-- ✅ No getting stuck on enemies or walls
-- ✅ Visual feedback for all interactions
+- **Green Dot**: Your player on minimap
+- **Red Dots**: Enemies on minimap
+- **Yellow Dots**: Loot chests on minimap
+- **Health Bars**: Above enemies showing current HP
+- **Damage Text**: Floating numbers during combat
+- **Screen Effects**: Shake and flash during combat
+
+The game now provides a much more engaging and interactive experience with proper combat mechanics and useful visual feedback!

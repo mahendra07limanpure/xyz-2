@@ -3,15 +3,25 @@ export interface Config {
     nodeEnv: string;
     databaseUrl: string;
     jwtSecret: string;
-    chainlinkVrfCoordinator: string;
-    chainlinkSubscriptionId: string;
-    chainlinkGasLane: string;
-    rpcUrls: {
-        ethereum: string;
-        polygon: string;
-        arbitrum: string;
+    blockchain: {
+        privateKey: string;
+        networks: {
+            sepolia: string;
+            polygonMumbai?: string;
+            arbitrumGoerli?: string;
+        };
+        contracts: {
+            lootManager: string;
+            partyRegistry: string;
+            crossChainLootManager: string;
+            randomLootGenerator: string;
+        };
+        chainlink: {
+            vrfCoordinator: string;
+            subscriptionId: string;
+            gasLane: string;
+        };
     };
-    privateKey: string;
     elizaConfig: {
         apiKey: string;
         model: string;

@@ -3,13 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GameController = void 0;
 const prisma_1 = require("../database/prisma");
 class GameController {
-    constructor() {
-        this.db = (0, prisma_1.getDatabase)();
+    getDb() {
+        return (0, prisma_1.getDatabase)();
     }
     async getGameState(req, res, next) {
         try {
             const { playerId } = req.params;
-            const player = await this.db.player.findUnique({
+            const player = await this.getDb().player.findUnique({
                 where: { id: playerId },
                 include: {
                     parties: {
@@ -63,11 +63,11 @@ class GameController {
     async joinGame(req, res, next) {
         try {
             const { wallet, username } = req.body;
-            let player = await this.db.player.findUnique({
+            let player = await this.getDb().player.findUnique({
                 where: { wallet }
             });
             if (!player) {
-                player = await this.db.player.create({
+                player = await this.getDb().player.create({
                     data: {
                         wallet,
                         username,
@@ -81,7 +81,7 @@ class GameController {
                 });
             }
             else {
-                player = await this.db.player.update({
+                player = await this.getDb().player.update({
                     where: { id: player.id },
                     data: { isActive: true },
                     include: {
@@ -98,7 +98,7 @@ class GameController {
     async leaveGame(req, res, next) {
         try {
             const { playerId } = req.body;
-            await this.db.player.update({
+            await this.getDb().player.update({
                 where: { id: playerId },
                 data: { isActive: false }
             });
@@ -110,7 +110,7 @@ class GameController {
     }
     async getLeaderboard(req, res, next) {
         try {
-            const players = await this.db.player.findMany({
+            const players = await this.getDb().player.findMany({
                 include: {
                     gameStats: true
                 },
@@ -128,14 +128,14 @@ class GameController {
     async registerPlayer(req, res, next) {
         try {
             const { wallet, username } = req.body;
-            const existingPlayer = await this.db.player.findUnique({
+            const existingPlayer = await this.getDb().player.findUnique({
                 where: { wallet }
             });
             if (existingPlayer) {
                 res.status(400).json({ success: false, message: 'Player already registered' });
                 return;
             }
-            const player = await this.db.player.create({
+            const player = await this.getDb().player.create({
                 data: {
                     wallet,
                     username,
@@ -156,7 +156,7 @@ class GameController {
     async getPlayer(req, res, next) {
         try {
             const { wallet } = req.params;
-            const player = await this.db.player.findUnique({
+            const player = await this.getDb().player.findUnique({
                 where: { wallet },
                 include: {
                     equipment: true,
@@ -182,7 +182,7 @@ class GameController {
         try {
             const { playerId } = req.params;
             const updateData = req.body;
-            const player = await this.db.player.update({
+            const player = await this.getDb().player.update({
                 where: { id: playerId },
                 data: updateData,
                 include: {

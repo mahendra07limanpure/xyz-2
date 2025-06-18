@@ -5,8 +5,8 @@ const prisma_1 = require("../database/prisma");
 const elizaService_1 = require("../services/elizaService");
 const logger_1 = require("../utils/logger");
 class AIController {
-    constructor() {
-        this.db = (0, prisma_1.getDatabase)();
+    getDb() {
+        return (0, prisma_1.getDatabase)();
     }
     async interactWithNPC(req, res, next) {
         try {
@@ -27,12 +27,12 @@ class AIController {
                 return;
             }
             const response = await elizaService_1.elizaService.generateResponse(npcId, message, context);
-            const interaction = await this.db.aIInteraction.create({
+            const interaction = await this.getDb().aIInteraction.create({
                 data: {
                     playerId,
                     npcName: agent.name,
                     interaction: 'dialogue',
-                    context: context || {},
+                    context: JSON.stringify(context || {}),
                     response
                 }
             });
@@ -66,8 +66,15 @@ class AIController {
         try {
             const { playerId } = req.params;
             const { limit = 50, offset = 0 } = req.query;
-            const interactions = await this.db.aIInteraction.findMany({
-                where: { playerId },
+            if (!playerId || typeof playerId !== 'string') {
+                res.status(400).json({
+                    success: false,
+                    message: 'Invalid playerId'
+                });
+                return;
+            }
+            const interactions = await this.getDb().aIInteraction.findMany({
+                where: { playerId: playerId },
                 orderBy: { createdAt: 'desc' },
                 take: Number(limit),
                 skip: Number(offset)

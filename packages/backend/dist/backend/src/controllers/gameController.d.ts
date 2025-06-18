@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 export declare class GameController {
-    private db;
+    private getDb;
     getGameState(req: Request, res: Response, next: NextFunction): Promise<void>;
     joinGame(req: Request, res: Response, next: NextFunction): Promise<void>;
     leaveGame(req: Request, res: Response, next: NextFunction): Promise<void>;

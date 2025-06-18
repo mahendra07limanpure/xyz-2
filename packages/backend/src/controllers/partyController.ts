@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { getDatabase } from '../database/prisma';
+import { blockchainService } from '../services/blockchainService';
 import { logger } from '../utils/logger';
 
 export class PartyController {
@@ -9,33 +10,27 @@ export class PartyController {
 
   async createParty(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { playerId, name, maxSize = 4, chainId } = req.body;
+      const { playerId, playerAddress, name, maxSize = 4, chainId = 11155111 } = req.body;
 
-      if (!playerId || !chainId) {
+      if (!playerId || !playerAddress) {
         res.status(400).json({ 
           success: false, 
-          message: 'Missing required fields: playerId, chainId' 
+          message: 'Missing required fields: playerId, playerAddress' 
         });
         return;
       }
 
-      // Check if player is already in a party
-      const existingMembership = await this.getDb().partyMember.findFirst({
-        where: {
-          playerId,
-          party: { isActive: true }
-        }
-      });
-
-      if (existingMembership) {
-        res.status(400).json({ 
-          success: false, 
-          message: 'Player is already in an active party' 
-        });
-        return;
+      // Register player on blockchain if not already registered
+      try {
+        await blockchainService.registerPlayer(chainId, playerAddress);
+      } catch (error) {
+        logger.warn('Player may already be registered on blockchain:', error);
       }
 
-      // Create party
+      // Create party on blockchain
+      const blockchainResult = await blockchainService.createParty(chainId, maxSize);
+
+      // Create party in database
       const party = await this.getDb().party.create({
         data: {
           name,
@@ -52,7 +47,9 @@ export class PartyController {
         include: {
           members: {
             include: {
-              player: true
+              player: {
+                select: { id: true, username: true, wallet: true }
+              }
             }
           }
         }
@@ -60,7 +57,11 @@ export class PartyController {
 
       res.json({ 
         success: true, 
-        data: party 
+        data: {
+          ...party,
+          blockchainPartyId: blockchainResult.partyId.toString(),
+          transactionHash: blockchainResult.transactionHash
+        }
       });
 
     } catch (error) {
@@ -73,7 +74,7 @@ export class PartyController {
     try {
       const { partyId, playerId, role = 'member' } = req.body;
 
-      if (!partyId || !playerId) {
+      if (!partyId || !playerId || typeof partyId !== 'string' || typeof playerId !== 'string') {
         res.status(400).json({ 
           success: false, 
           message: 'Missing required fields: partyId, playerId' 
@@ -152,7 +153,7 @@ export class PartyController {
     try {
       const { partyId, playerId } = req.body;
 
-      if (!partyId || !playerId) {
+      if (!partyId || !playerId || typeof partyId !== 'string' || typeof playerId !== 'string') {
         res.status(400).json({ 
           success: false, 
           message: 'Missing required fields: partyId, playerId' 

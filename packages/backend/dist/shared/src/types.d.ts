@@ -372,9 +372,9 @@ export interface GameError {
 }
 export interface GameState {
     player: Player;
-    party: Party | null;
-    equipment: Equipment[];
-    stats: PlayerStats;
+    party: any | null;
+    equipment: any[];
+    stats: any;
     currentDungeon?: Dungeon;
 }
 export interface GameStats {

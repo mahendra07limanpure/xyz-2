@@ -77,8 +77,16 @@ export class AIController {
       const { playerId } = req.params;
       const { limit = 50, offset = 0 } = req.query;
 
+      if (!playerId || typeof playerId !== 'string') {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Invalid playerId' 
+        });
+        return;
+      }
+
       const interactions = await this.getDb().aIInteraction.findMany({
-        where: { playerId },
+        where: { playerId: playerId },
         orderBy: { createdAt: 'desc' },
         take: Number(limit),
         skip: Number(offset)

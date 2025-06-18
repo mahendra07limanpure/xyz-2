@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 export declare class PartyController {
-    private db;
+    private getDb;
     createParty(req: Request, res: Response, next: NextFunction): Promise<void>;
     joinParty(req: Request, res: Response, next: NextFunction): Promise<void>;
     leaveParty(req: Request, res: Response, next: NextFunction): Promise<void>;

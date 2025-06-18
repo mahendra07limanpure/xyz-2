@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.25;
 
 import "../lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import "../lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
@@ -39,6 +39,18 @@ contract LootManager is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard, VRFC
         bool isLendable;
         address originalOwner;
         uint256 createdAt;
+        string lootType;
+        uint256 power;
+        string[] attributes;
+    }
+
+    // Backward compatibility struct for CCIP
+    struct LootItem {
+        string name;
+        string lootType;
+        uint256 rarity;
+        uint256 power;
+        string[] attributes;
     }
     
     struct LootRequest {
@@ -82,6 +94,15 @@ contract LootManager is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard, VRFC
         i_callbackGasLimit = callbackGasLimit;
         
         _initializeProbabilities();
+    }
+
+    // Override required functions
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, ERC721URIStorage) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+
+    function tokenURI(uint256 tokenId) public view virtual override(ERC721, ERC721URIStorage) returns (string memory) {
+        return super.tokenURI(tokenId);
     }
     
     /**
@@ -148,19 +169,22 @@ contract LootManager is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard, VRFC
         uint256 rarityRandom = randomWords[1] % 10000;
         uint256 statsRandom = randomWords[2];
         
+        // Determine equipment type
         EquipmentType equipType = _determineEquipmentType(typeRandom);
-        Rarity rarity = _determineRarity(rarityRandom, dungeonLevel);
         
-        _tokenIds++;
-        uint256 newTokenId = _tokenIds;
+        // Determine rarity (with level scaling)
+        Rarity rarity = _determineRarity(rarityRandom + (dungeonLevel * 100));
         
-        // Generate stats based on rarity and dungeon level
-        (uint256 attackPower, uint256 defensePower, uint256 magicPower) = _generateStats(
-            equipType, 
-            rarity, 
-            dungeonLevel, 
-            statsRandom
-        );
+        // Calculate stats based on rarity and level
+        uint256 baseStats = (uint256(rarity) + 1) * 10;
+        uint256 levelBonus = dungeonLevel * 5;
+        uint256 randomBonus = (statsRandom % 20) + 1;
+        
+        uint256 attackPower = baseStats + levelBonus + randomBonus;
+        uint256 defensePower = (attackPower * 80) / 100;
+        uint256 magicPower = (attackPower * 60) / 100;
+        
+        uint256 newTokenId = ++_tokenIds;
         
         string memory itemName = _generateItemName(equipType, rarity, statsRandom);
         
@@ -175,15 +199,18 @@ contract LootManager is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard, VRFC
             durability: 100,
             isLendable: false,
             originalOwner: player,
-            createdAt: block.timestamp
+            createdAt: block.timestamp,
+            lootType: _equipmentTypeToString(equipType),
+            power: attackPower,
+            attributes: new string[](0)
         });
         
         _safeMint(player, newTokenId);
         playerEquipment[player].push(newTokenId);
         equipmentOwner[newTokenId] = player;
         
-        emit EquipmentCreated(newTokenId, player, itemName);
         emit LootGenerated(newTokenId, player, equipType, rarity);
+        emit EquipmentCreated(newTokenId, player, itemName);
     }
     
     /**
@@ -199,89 +226,58 @@ contract LootManager is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard, VRFC
                 return equipType;
             }
         }
-        return EquipmentType.WEAPON; // Fallback
+        
+        return EquipmentType.CONSUMABLE; // Fallback
     }
     
     /**
-     * @dev Determine rarity based on random value and dungeon level
+     * @dev Determine rarity based on random value
      */
-    function _determineRarity(uint256 randomValue, uint256 dungeonLevel) internal view returns (Rarity) {
-        // Higher dungeon levels increase chances of better loot
-        uint256 levelBonus = (dungeonLevel * 100); // 1% per level bonus for higher rarities
-        
+    function _determineRarity(uint256 randomValue) internal view returns (Rarity) {
+        uint256 normalizedValue = randomValue % 10000;
         uint256 cumulative = 0;
         
-        // Check from highest rarity to lowest
-        for (int256 i = 5; i >= 0; i--) {
-            Rarity rarity = Rarity(uint256(i));
-            uint256 probability = rarityProbabilities[rarity];
-            
-            if (i >= 3) { // EPIC, LEGENDARY, MYTHIC get level bonus
-                probability += levelBonus;
-            }
-            
-            cumulative += probability;
-            if (randomValue < cumulative) {
+        for (uint256 i = 0; i < 6; i++) {
+            Rarity rarity = Rarity(i);
+            cumulative += rarityProbabilities[rarity];
+            if (normalizedValue < cumulative) {
                 return rarity;
             }
         }
+        
         return Rarity.COMMON; // Fallback
     }
     
     /**
-     * @dev Generate item stats based on type, rarity, and level
+     * @dev Generate item name based on type and rarity
      */
-    function _generateStats(
-        EquipmentType equipType, 
-        Rarity rarity, 
-        uint256 dungeonLevel, 
-        uint256 randomSeed
-    ) internal pure returns (uint256 attackPower, uint256 defensePower, uint256 magicPower) {
-        uint256 basePower = (dungeonLevel * 10) + (uint256(rarity) * 20) + 10;
-        uint256 variance = (randomSeed % 21) + 90; // 90-110% of base
+    function _generateItemName(EquipmentType equipType, Rarity rarity, uint256 seed) internal pure returns (string memory) {
+        string memory rarityPrefix = _getRarityPrefix(rarity);
+        string memory typeString = _getEquipmentTypeString(equipType);
         
-        basePower = (basePower * variance) / 100;
-        
-        if (equipType == EquipmentType.WEAPON) {
-            attackPower = basePower;
-            defensePower = basePower / 4;
-            magicPower = basePower / 2;
-        } else if (equipType == EquipmentType.ARMOR) {
-            attackPower = basePower / 4;
-            defensePower = basePower;
-            magicPower = basePower / 3;
-        } else if (equipType == EquipmentType.ACCESSORY) {
-            attackPower = basePower / 3;
-            defensePower = basePower / 3;
-            magicPower = basePower;
-        } else { // CONSUMABLE
-            attackPower = basePower / 2;
-            defensePower = basePower / 2;
-            magicPower = basePower / 2;
-        }
+        return string(abi.encodePacked(rarityPrefix, " ", typeString));
     }
     
     /**
-     * @dev Generate item name based on properties
+     * @dev Get rarity prefix for naming
      */
-    function _generateItemName(
-        EquipmentType equipType, 
-        Rarity rarity, 
-        uint256 randomSeed
-    ) internal pure returns (string memory) {
-        string[6] memory rarityPrefixes = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"];
-        string[4] memory typeNames = ["Sword", "Armor", "Ring", "Potion"];
-        
-        uint256 suffixIndex = randomSeed % 5;
-        string[5] memory suffixes = ["of Power", "of Protection", "of Wisdom", "of Speed", "of Fortune"];
-        
-        return string(abi.encodePacked(
-            rarityPrefixes[uint256(rarity)], 
-            " ", 
-            typeNames[uint256(equipType)],
-            " ",
-            suffixes[suffixIndex]
-        ));
+    function _getRarityPrefix(Rarity rarity) internal pure returns (string memory) {
+        if (rarity == Rarity.COMMON) return "Common";
+        if (rarity == Rarity.UNCOMMON) return "Uncommon";
+        if (rarity == Rarity.RARE) return "Rare";
+        if (rarity == Rarity.EPIC) return "Epic";
+        if (rarity == Rarity.LEGENDARY) return "Legendary";
+        return "Mythic";
+    }
+    
+    /**
+     * @dev Get equipment type string for naming
+     */
+    function _getEquipmentTypeString(EquipmentType equipType) internal pure returns (string memory) {
+        if (equipType == EquipmentType.WEAPON) return "Weapon";
+        if (equipType == EquipmentType.ARMOR) return "Armor";
+        if (equipType == EquipmentType.ACCESSORY) return "Accessory";
+        return "Consumable";
     }
     
     /**
@@ -308,13 +304,96 @@ contract LootManager is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard, VRFC
     }
     
     /**
-     * @dev Override required functions
+     * @dev Get loot data in CCIP compatible format
      */
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return super.tokenURI(tokenId);
+    function getLoot(uint256 tokenId) external view returns (LootItem memory) {
+        Equipment memory eq = equipment[tokenId];
+        return LootItem({
+            name: eq.name,
+            lootType: eq.lootType,
+            rarity: uint256(eq.rarity),
+            power: eq.power,
+            attributes: eq.attributes
+        });
     }
     
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
-        return super.supportsInterface(interfaceId);
+    /**
+     * @dev Mint loot with specific attributes (for CCIP)
+     */
+    function mintLoot(
+        address to,
+        string memory name,
+        string memory lootType,
+        uint256 rarity,
+        uint256 power,
+        string[] memory attributes
+    ) external onlyOwner returns (uint256) {
+        uint256 tokenId = ++_tokenIds;
+        _safeMint(to, tokenId);
+        
+        equipment[tokenId] = Equipment({
+            tokenId: tokenId,
+            equipmentType: _stringToEquipmentType(lootType),
+            rarity: Rarity(rarity),
+            name: name,
+            attackPower: power,
+            defensePower: power / 2,
+            magicPower: power / 3,
+            durability: 100,
+            isLendable: false,
+            originalOwner: to,
+            createdAt: block.timestamp,
+            lootType: lootType,
+            power: power,
+            attributes: attributes
+        });
+        
+        playerEquipment[to].push(tokenId);
+        equipmentOwner[tokenId] = to;
+        
+        emit EquipmentCreated(tokenId, to, name);
+        return tokenId;
+    }
+    
+    /**
+     * @dev Burn loot (for cross-chain transfers)
+     */
+    function burnLoot(uint256 tokenId) external onlyOwner {
+        address owner = ownerOf(tokenId);
+        
+        // Remove from player's equipment array
+        uint256[] storage playerEq = playerEquipment[owner];
+        for (uint256 i = 0; i < playerEq.length; i++) {
+            if (playerEq[i] == tokenId) {
+                playerEq[i] = playerEq[playerEq.length - 1];
+                playerEq.pop();
+                break;
+            }
+        }
+        
+        delete equipment[tokenId];
+        delete equipmentOwner[tokenId];
+        _burn(tokenId);
+    }
+    
+    /**
+     * @dev Convert equipment type to string
+     */
+    function _equipmentTypeToString(EquipmentType equipType) internal pure returns (string memory) {
+        if (equipType == EquipmentType.WEAPON) return "Weapon";
+        if (equipType == EquipmentType.ARMOR) return "Armor";
+        if (equipType == EquipmentType.ACCESSORY) return "Accessory";
+        return "Consumable";
+    }
+    
+    /**
+     * @dev Convert string to equipment type
+     */
+    function _stringToEquipmentType(string memory typeStr) internal pure returns (EquipmentType) {
+        bytes32 typeHash = keccak256(bytes(typeStr));
+        if (typeHash == keccak256(bytes("Weapon"))) return EquipmentType.WEAPON;
+        if (typeHash == keccak256(bytes("Armor"))) return EquipmentType.ARMOR;
+        if (typeHash == keccak256(bytes("Accessory"))) return EquipmentType.ACCESSORY;
+        return EquipmentType.CONSUMABLE;
     }
 }

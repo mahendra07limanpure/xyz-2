@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { getDatabase } from '../database/prisma';
+import { blockchainService } from '../services/blockchainService';
 import { logger } from '../utils/logger';
 
 export class LootController {
@@ -9,12 +10,17 @@ export class LootController {
 
   async generateLoot(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { playerId, dungeonLevel = 1, lootType = 'random' } = req.body;
+      const { 
+        playerId, 
+        playerAddress, 
+        dungeonLevel = 1, 
+        chainId = 11155111 
+      } = req.body;
 
-      if (!playerId) {
+      if (!playerId || !playerAddress) {
         res.status(400).json({ 
           success: false, 
-          message: 'Missing required field: playerId' 
+          message: 'Missing required fields: playerId, playerAddress' 
         });
         return;
       }
@@ -22,19 +28,34 @@ export class LootController {
       // Generate random equipment
       const equipment = this.generateRandomEquipment(dungeonLevel);
       
+      // Mint NFT on blockchain
+      const mintResult = await blockchainService.mintLoot(
+        chainId,
+        playerAddress,
+        equipment.name,
+        equipment.equipmentType,
+        this.getRarityIndex(equipment.rarity),
+        equipment.attackPower,
+        equipment.attributes || []
+      );
+
       // Save to database
       const createdEquipment = await this.getDb().equipment.create({
         data: {
           ...equipment,
-          ownerId: playerId
+          tokenId: mintResult.tokenId.toString(),
+          ownerId: playerId,
         }
       });
 
       res.json({ 
         success: true, 
-        data: createdEquipment 
+        data: {
+          ...createdEquipment,
+          transactionHash: mintResult.transactionHash,
+          chainId
+        }
       });
-
     } catch (error) {
       logger.error('Generate loot error:', error);
       next(error);
@@ -46,19 +67,24 @@ export class LootController {
       const { playerId } = req.params;
       const { limit = 20, offset = 0 } = req.query;
 
+      if (!playerId) {
+        res.status(400).json({ success: false, message: 'Player ID is required' });
+        return;
+      }
+
       const equipment = await this.getDb().equipment.findMany({
         where: { ownerId: playerId },
-        orderBy: { createdAt: 'desc' },
+        skip: Number(offset),
         take: Number(limit),
-        skip: Number(offset)
+        orderBy: { createdAt: 'desc' }
       });
 
       res.json({ 
         success: true, 
         data: equipment 
       });
-
     } catch (error) {
+      logger.error('Get player loot error:', error);
       next(error);
     }
   }
@@ -67,12 +93,23 @@ export class LootController {
     try {
       const { tokenId } = req.params;
 
+      if (!tokenId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing tokenId' 
+        });
+        return;
+      }
+
       const equipment = await this.getDb().equipment.findUnique({
-        where: { tokenId },
+        where: { tokenId: tokenId },
         include: {
-          owner: true,
+          owner: {
+            select: { id: true, username: true, wallet: true }
+          },
           lendingOrders: {
-            where: { status: 'active' }
+            where: { status: 'active' },
+            orderBy: { createdAt: 'desc' }
           }
         }
       });
@@ -91,18 +128,25 @@ export class LootController {
       });
 
     } catch (error) {
+      logger.error('Get equipment error:', error);
       next(error);
     }
   }
 
   async createLendingOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { equipmentId, lenderId, price, collateral, duration } = req.body;
+      const { 
+        equipmentId, 
+        lenderId, 
+        price, 
+        collateral, 
+        duration = 24 
+      } = req.body;
 
-      if (!equipmentId || !lenderId || !price || !collateral || !duration) {
+      if (!equipmentId || !lenderId || !price || !collateral) {
         res.status(400).json({ 
           success: false, 
-          message: 'Missing required fields' 
+          message: 'Missing required fields: equipmentId, lenderId, price, collateral' 
         });
         return;
       }
@@ -113,26 +157,39 @@ export class LootController {
       });
 
       if (!equipment || equipment.ownerId !== lenderId) {
-        res.status(400).json({ 
+        res.status(403).json({ 
           success: false, 
           message: 'Equipment not found or not owned by lender' 
         });
         return;
       }
 
-      // Create lending order
+      if (!equipment.isLendable) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Equipment is not lendable' 
+        });
+        return;
+      }
+
       const lendingOrder = await this.getDb().lendingOrder.create({
         data: {
           equipmentId,
           lenderId,
-          price,
-          collateral,
+          price: price.toString(),
+          collateral: collateral.toString(),
           duration,
           status: 'active',
-          expiresAt: new Date(Date.now() + duration * 60 * 60 * 1000) // duration in hours
+          expiresAt: new Date(Date.now() + duration * 60 * 60 * 1000)
         },
         include: {
-          equipment: true
+          equipment: {
+            include: {
+              owner: {
+                select: { id: true, username: true, wallet: true }
+              }
+            }
+          }
         }
       });
 
@@ -149,23 +206,25 @@ export class LootController {
 
   async borrowEquipment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { orderId, borrowerId } = req.body;
+      const { orderId, borrowerId, borrowerAddress } = req.body;
 
-      if (!orderId || !borrowerId) {
+      if (!orderId || !borrowerId || !borrowerAddress) {
         res.status(400).json({ 
           success: false, 
-          message: 'Missing required fields: orderId, borrowerId' 
+          message: 'Missing required fields: orderId, borrowerId, borrowerAddress' 
         });
         return;
       }
 
       const order = await this.getDb().lendingOrder.findUnique({
         where: { id: orderId },
-        include: { equipment: true }
+        include: {
+          equipment: true
+        }
       });
 
       if (!order || order.status !== 'active') {
-        res.status(400).json({ 
+        res.status(404).json({ 
           success: false, 
           message: 'Lending order not found or not active' 
         });
@@ -188,7 +247,13 @@ export class LootController {
           status: 'completed'
         },
         include: {
-          equipment: true
+          equipment: {
+            include: {
+              owner: {
+                select: { id: true, username: true, wallet: true }
+              }
+            }
+          }
         }
       });
 
@@ -208,49 +273,64 @@ export class LootController {
       const { 
         limit = 20, 
         offset = 0, 
-        equipmentType, 
         rarity, 
+        equipmentType, 
         minPrice, 
         maxPrice 
       } = req.query;
 
-      const where: any = {
+      const where: any = { 
         status: 'active',
         expiresAt: { gt: new Date() }
       };
 
-      if (equipmentType) {
-        where.equipment = { equipmentType };
-      }
-
       if (rarity) {
         where.equipment = { ...where.equipment, rarity };
       }
-
+      if (equipmentType) {
+        where.equipment = { ...where.equipment, equipmentType };
+      }
       if (minPrice) {
-        where.price = { ...where.price, gte: String(minPrice) };
+        where.price = { ...where.price, gte: minPrice.toString() };
       }
-
       if (maxPrice) {
-        where.price = { ...where.price, lte: String(maxPrice) };
+        where.price = { ...where.price, lte: maxPrice.toString() };
       }
 
-      const orders = await this.getDb().lendingOrder.findMany({
-        where,
-        include: {
-          equipment: true
-        },
-        orderBy: { createdAt: 'desc' },
-        take: Number(limit),
-        skip: Number(offset)
-      });
+      const [orders, total] = await Promise.all([
+        this.getDb().lendingOrder.findMany({
+          where,
+          include: {
+            equipment: {
+              include: {
+                owner: {
+                  select: { id: true, username: true, wallet: true }
+                }
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: Number(limit),
+          skip: Number(offset)
+        }),
+        this.getDb().lendingOrder.count({ where })
+      ]);
 
       res.json({ 
         success: true, 
-        data: orders 
+        data: {
+          orders,
+          pagination: {
+            total,
+            offset: Number(offset),
+            limit: Number(limit),
+            hasMore: Number(offset) + Number(limit) < total
+          }
+        }
       });
 
     } catch (error) {
+      logger.error('Get marketplace error:', error);
       next(error);
     }
   }
@@ -258,102 +338,95 @@ export class LootController {
   async updateLendingOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { orderId } = req.params;
-      const updateData = req.body;
+      const { status, borrowerId } = req.body;
 
-      const order = await this.getDb().lendingOrder.update({
+      if (!orderId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing orderId' 
+        });
+        return;
+      }
+
+      const updatedOrder = await this.getDb().lendingOrder.update({
         where: { id: orderId },
-        data: updateData,
+        data: { status, borrowerId },
         include: {
-          equipment: true
+          equipment: {
+            include: {
+              owner: {
+                select: { id: true, username: true, wallet: true }
+              }
+            }
+          }
         }
       });
 
       res.json({ 
         success: true, 
-        data: order 
+        data: updatedOrder 
       });
 
     } catch (error) {
+      logger.error('Update lending order error:', error);
       next(error);
     }
   }
 
   private generateRandomEquipment(dungeonLevel: number) {
-    const types = ['weapon', 'armor', 'accessory', 'consumable'];
-    const rarities = ['common', 'rare', 'epic', 'legendary'];
-    const rarityWeights = [60, 25, 12, 3]; // Percentage chances
-
-    const equipmentType = types[Math.floor(Math.random() * types.length)]!;
+    const equipmentTypes = ['weapon', 'armor', 'accessory', 'consumable'];
+    const equipmentType = equipmentTypes[Math.floor(Math.random() * equipmentTypes.length)];
+    const rarity = this.generateRarity(dungeonLevel);
+    const rarityIndex = this.getRarityIndex(rarity);
     
-    // Determine rarity based on weights
-    const rand = Math.random() * 100;
-    let cumulativeWeight = 0;
-    let rarity = 'common';
+    const basePower = (rarityIndex + 1) * 10 + dungeonLevel * 5;
+    const attackPower = basePower + Math.floor(Math.random() * 20);
     
-    for (let i = 0; i < rarities.length; i++) {
-      cumulativeWeight += rarityWeights[i]!;
-      if (rand <= cumulativeWeight) {
-        rarity = rarities[i]!;
-        break;
-      }
-    }
-
-    // Generate stats based on dungeon level and rarity
-    const rarityMultiplier = { common: 1, rare: 1.5, epic: 2, legendary: 3 }[rarity] || 1;
-    const baseStats = Math.floor(dungeonLevel * 10 * rarityMultiplier);
-
-    const equipment = {
-      tokenId: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: this.generateEquipmentName(equipmentType, rarity),
-      equipmentType,
+    return {
+      name: this.generateEquipmentName(equipmentType || 'weapon', rarity),
+      equipmentType: equipmentType as string,
       rarity,
-      attackPower: equipmentType === 'weapon' ? baseStats + Math.floor(Math.random() * 20) : 0,
-      defensePower: equipmentType === 'armor' ? baseStats + Math.floor(Math.random() * 20) : 0,
-      magicPower: Math.floor(Math.random() * baseStats * 0.5),
-      specialAbility: rarity !== 'common' ? this.generateSpecialAbility(equipmentType) : null,
-      isLendable: false
+      attackPower,
+      defensePower: Math.floor(attackPower * 0.8),
+      magicPower: Math.floor(attackPower * 0.6),
+      specialAbility: this.generateSpecialAbility(rarity),
+      attributes: [`${equipmentType} +${attackPower}`],
     };
+  }
 
-    return equipment;
+  private generateRarity(dungeonLevel: number): string {
+    const roll = Math.random() * 100 + dungeonLevel * 2;
+    if (roll >= 95) return 'mythic';
+    if (roll >= 85) return 'legendary';
+    if (roll >= 70) return 'epic';
+    if (roll >= 50) return 'rare';
+    if (roll >= 25) return 'uncommon';
+    return 'common';
   }
 
   private generateEquipmentName(type: string, rarity: string): string {
     const prefixes = {
-      common: ['Basic', 'Simple', 'Plain'],
-      rare: ['Enhanced', 'Superior', 'Fine'],
-      epic: ['Masterwork', 'Enchanted', 'Legendary'],
-      legendary: ['Mythical', 'Ancient', 'Divine']
+      common: 'Basic', uncommon: 'Enhanced', rare: 'Superior',
+      epic: 'Heroic', legendary: 'Legendary', mythic: 'Mythic'
     };
-
-    const weaponNames = ['Sword', 'Axe', 'Bow', 'Staff', 'Dagger'];
-    const armorNames = ['Helmet', 'Chestplate', 'Gauntlets', 'Boots', 'Shield'];
-    const accessoryNames = ['Ring', 'Amulet', 'Cloak', 'Belt', 'Bracelet'];
-    const consumableNames = ['Potion', 'Scroll', 'Elixir', 'Tonic', 'Herb'];
-
-    let baseNames: string[];
-    switch (type) {
-      case 'weapon': baseNames = weaponNames; break;
-      case 'armor': baseNames = armorNames; break;
-      case 'accessory': baseNames = accessoryNames; break;
-      case 'consumable': baseNames = consumableNames; break;
-      default: baseNames = ['Item'];
-    }
-
-    const prefix = prefixes[rarity as keyof typeof prefixes][Math.floor(Math.random() * 3)];
-    const baseName = baseNames[Math.floor(Math.random() * baseNames.length)];
-
-    return `${prefix} ${baseName}`;
+    const names = {
+      weapon: 'Sword', armor: 'Armor', accessory: 'Ring', consumable: 'Potion'
+    };
+    return `${prefixes[rarity as keyof typeof prefixes]} ${names[type as keyof typeof names]}`;
   }
 
-  private generateSpecialAbility(type: string): string {
-    const abilities = {
-      weapon: ['Flame Strike', 'Frost Bite', 'Lightning Bolt', 'Poison Edge', 'Vampiric Drain'],
-      armor: ['Damage Reflection', 'Magic Shield', 'Regeneration', 'Spell Absorption', 'Fortification'],
-      accessory: ['Luck Boost', 'Experience Gain', 'Mana Regeneration', 'Health Boost', 'Speed Enhancement'],
-      consumable: ['Instant Heal', 'Mana Restore', 'Temporary Strength', 'Invisibility', 'Berserker Rage']
-    };
+  private generateSpecialAbility(rarity: string): string | null {
+    const rarityIndex = this.getRarityIndex(rarity);
+    if (rarityIndex < 2) return null;
+    const abilities = ['Fire Damage', 'Ice Damage', 'Lightning Damage'];
+    const ability = abilities[Math.floor(Math.random() * abilities.length)];
+    return ability || null;
+  }
 
-    const typeAbilities = abilities[type as keyof typeof abilities] || abilities.weapon;
-    return typeAbilities[Math.floor(Math.random() * typeAbilities.length)]!;
+  private getRarityIndex(rarity: string): number {
+    const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+    return rarities.indexOf(rarity.toLowerCase());
   }
 }
+
+export const lootController = new LootController();

@@ -2,35 +2,30 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PartyController = void 0;
 const prisma_1 = require("../database/prisma");
+const blockchainService_1 = require("../services/blockchainService");
 const logger_1 = require("../utils/logger");
 class PartyController {
-    constructor() {
-        this.db = (0, prisma_1.getDatabase)();
+    getDb() {
+        return (0, prisma_1.getDatabase)();
     }
     async createParty(req, res, next) {
         try {
-            const { playerId, name, maxSize = 4, chainId } = req.body;
-            if (!playerId || !chainId) {
+            const { playerId, playerAddress, name, maxSize = 4, chainId = 11155111 } = req.body;
+            if (!playerId || !playerAddress) {
                 res.status(400).json({
                     success: false,
-                    message: 'Missing required fields: playerId, chainId'
+                    message: 'Missing required fields: playerId, playerAddress'
                 });
                 return;
             }
-            const existingMembership = await this.db.partyMember.findFirst({
-                where: {
-                    playerId,
-                    party: { isActive: true }
-                }
-            });
-            if (existingMembership) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Player is already in an active party'
-                });
-                return;
+            try {
+                await blockchainService_1.blockchainService.registerPlayer(chainId, playerAddress);
             }
-            const party = await this.db.party.create({
+            catch (error) {
+                logger_1.logger.warn('Player may already be registered on blockchain:', error);
+            }
+            const blockchainResult = await blockchainService_1.blockchainService.createParty(chainId, maxSize);
+            const party = await this.getDb().party.create({
                 data: {
                     name,
                     maxSize,
@@ -46,14 +41,20 @@ class PartyController {
                 include: {
                     members: {
                         include: {
-                            player: true
+                            player: {
+                                select: { id: true, username: true, wallet: true }
+                            }
                         }
                     }
                 }
             });
             res.json({
                 success: true,
-                data: party
+                data: {
+                    ...party,
+                    blockchainPartyId: blockchainResult.partyId.toString(),
+                    transactionHash: blockchainResult.transactionHash
+                }
             });
         }
         catch (error) {
@@ -64,14 +65,14 @@ class PartyController {
     async joinParty(req, res, next) {
         try {
             const { partyId, playerId, role = 'member' } = req.body;
-            if (!partyId || !playerId) {
+            if (!partyId || !playerId || typeof partyId !== 'string' || typeof playerId !== 'string') {
                 res.status(400).json({
                     success: false,
                     message: 'Missing required fields: partyId, playerId'
                 });
                 return;
             }
-            const party = await this.db.party.findUnique({
+            const party = await this.getDb().party.findUnique({
                 where: { id: partyId },
                 include: {
                     members: true
@@ -99,7 +100,7 @@ class PartyController {
                 });
                 return;
             }
-            const member = await this.db.partyMember.create({
+            const member = await this.getDb().partyMember.create({
                 data: {
                     partyId,
                     playerId,
@@ -132,14 +133,14 @@ class PartyController {
     async leaveParty(req, res, next) {
         try {
             const { partyId, playerId } = req.body;
-            if (!partyId || !playerId) {
+            if (!partyId || !playerId || typeof partyId !== 'string' || typeof playerId !== 'string') {
                 res.status(400).json({
                     success: false,
                     message: 'Missing required fields: partyId, playerId'
                 });
                 return;
             }
-            const member = await this.db.partyMember.findFirst({
+            const member = await this.getDb().partyMember.findFirst({
                 where: {
                     partyId,
                     playerId
@@ -159,11 +160,11 @@ class PartyController {
                 });
                 return;
             }
-            await this.db.partyMember.delete({
+            await this.getDb().partyMember.delete({
                 where: { id: member.id }
             });
             if (member.party.members.length === 1) {
-                await this.db.party.update({
+                await this.getDb().party.update({
                     where: { id: partyId },
                     data: { isActive: false }
                 });
@@ -171,7 +172,7 @@ class PartyController {
             else if (member.isLeader) {
                 const remainingMembers = member.party.members.filter((m) => m.id !== member.id);
                 if (remainingMembers.length > 0) {
-                    await this.db.partyMember.update({
+                    await this.getDb().partyMember.update({
                         where: { id: remainingMembers[0].id },
                         data: { isLeader: true, role: 'leader' }
                     });
@@ -190,7 +191,7 @@ class PartyController {
     async getParty(req, res, next) {
         try {
             const { partyId } = req.params;
-            const party = await this.db.party.findUnique({
+            const party = await this.getDb().party.findUnique({
                 where: { id: partyId },
                 include: {
                     members: {
@@ -223,7 +224,7 @@ class PartyController {
     async getPlayerParty(req, res, next) {
         try {
             const { playerId } = req.params;
-            const membership = await this.db.partyMember.findFirst({
+            const membership = await this.getDb().partyMember.findFirst({
                 where: {
                     playerId,
                     party: { isActive: true }
@@ -260,7 +261,7 @@ class PartyController {
         try {
             const { partyId } = req.params;
             const updateData = req.body;
-            const party = await this.db.party.update({
+            const party = await this.getDb().party.update({
                 where: { id: partyId },
                 data: updateData,
                 include: {
@@ -284,7 +285,7 @@ class PartyController {
         try {
             const { partyId } = req.params;
             const { playerId } = req.body;
-            const leader = await this.db.partyMember.findFirst({
+            const leader = await this.getDb().partyMember.findFirst({
                 where: {
                     partyId,
                     playerId,
@@ -298,7 +299,7 @@ class PartyController {
                 });
                 return;
             }
-            await this.db.party.update({
+            await this.getDb().party.update({
                 where: { id: partyId },
                 data: { isActive: false }
             });
