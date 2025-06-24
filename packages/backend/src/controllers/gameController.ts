@@ -69,7 +69,7 @@ export class GameController {
 
   async joinGame(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { wallet, username } = req.body;
+      const { wallet } = req.body;
 
       let player = await this.getDb().player.findUnique({
         where: { wallet }
@@ -79,7 +79,6 @@ export class GameController {
         player = await this.getDb().player.create({
           data: {
             wallet,
-            username,
             gameStats: {
               create: {}
             }
