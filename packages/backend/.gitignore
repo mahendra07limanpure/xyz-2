@@ -1,0 +1,6 @@
+dist
+logs
+dev.db
+node_modules
+.env
+*.log
