@@ -1,6 +1,8 @@
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { logger } from './logger';
+// import "../../../shared/src/abi"
 
 export class ABILoader {
   private static instance: ABILoader;
@@ -8,7 +10,10 @@ export class ABILoader {
   private abiPath: string;
 
   constructor() {
-    this.abiPath = join(__dirname, '../abis');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+
+    this.abiPath = join(__dirname, '../../../shared/src/abi');
     this.loadABIs();
   }
 
