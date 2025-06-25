@@ -8,13 +8,11 @@ export const apiClient = axios.create({
   timeout: 10000,
 });
 
-
 export const GAME_ROUTE = 'api/game';
 export const GAME_STATE_ROUTE = `${GAME_ROUTE}/state/{playerId}`;
-export const GAME_JOIN_ROUTE = `${GAME_ROUTE}/join`;
 export const GAME_LEAVE_ROUTE = `${GAME_ROUTE}/leave`;
 export const GAME_LEADERBOARD_ROUTE = `${GAME_ROUTE}/leaderboard`;
-export const GAME_PLAYER_REGISTER_ROUTE = `${GAME_ROUTE}/player/register`;
+export const GAME_PLAYER_REGISTER_ROUTE = `${GAME_ROUTE}/player/connect`;
 export const GAME_PLAYER_GET_ROUTE = `${GAME_ROUTE}/player/{wallet}`;
 export const GAME_PLAYER_UPDATE_ROUTE = `${GAME_ROUTE}/player/{playerId}`;
 
