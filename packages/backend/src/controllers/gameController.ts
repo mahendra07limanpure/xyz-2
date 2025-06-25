@@ -76,7 +76,7 @@ export class GameController {
         return;
       }
   
-      const db = this.getDb();
+      const db = getDatabase();
   
       let player = await db.player.findUnique({ where: { wallet } });
   
@@ -102,8 +102,10 @@ export class GameController {
   
       res.json({ success: true, data: player });
     } catch (error) {
+      console.error('Error connecting player:', error);
       next(error);
     }
+
   }
   
 

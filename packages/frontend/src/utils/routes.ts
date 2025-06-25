@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { time } from 'console';
 
 export const HOST = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
