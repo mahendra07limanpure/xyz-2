@@ -67,42 +67,47 @@ export class GameController {
     }
   }
 
-  async joinGame(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async connectPlayer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { wallet, username } = req.body;
-
-      let player = await this.getDb().player.findUnique({
-        where: { wallet }
-      });
-
-      if (!player) {
-        player = await this.getDb().player.create({
+      const { wallet } = req.body;
+  
+      if (!wallet) {
+        res.status(400).json({ success: false, message: 'Wallet is required' });
+        return;
+      }
+  
+      const db = getDatabase();
+  
+      let player = await db.player.findUnique({ where: { wallet } });
+  
+      if (player) {
+        // Reactivate existing player
+        player = await db.player.update({
+          where: { id: player.id },
+          data: { isActive: true },
+          include: { gameStats: true }
+        });
+      } else {
+        // Create new player with default game stats
+        player = await db.player.create({
           data: {
             wallet,
-            username,
             gameStats: {
               create: {}
             }
           },
-          include: {
-            gameStats: true
-          }
-        });
-      } else {
-        player = await this.getDb().player.update({
-          where: { id: player.id },
-          data: { isActive: true },
-          include: {
-            gameStats: true
-          }
+          include: { gameStats: true }
         });
       }
-
+  
       res.json({ success: true, data: player });
     } catch (error) {
+      console.error('Error connecting player:', error);
       next(error);
     }
+
   }
+  
 
   async leaveGame(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -137,37 +142,7 @@ export class GameController {
     }
   }
 
-  async registerPlayer(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { wallet, username } = req.body;
-
-      const existingPlayer = await this.getDb().player.findUnique({
-        where: { wallet }
-      });
-
-      if (existingPlayer) {
-        res.status(400).json({ success: false, message: 'Player already registered' });
-        return;
-      }
-
-      const player = await this.getDb().player.create({
-        data: {
-          wallet,
-          username,
-          gameStats: {
-            create: {}
-          }
-        },
-        include: {
-          gameStats: true
-        }
-      });
-
-      res.json({ success: true, data: player });
-    } catch (error) {
-      next(error);
-    }
-  }
+  
 
   async getPlayer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
