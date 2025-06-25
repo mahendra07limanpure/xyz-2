@@ -419,6 +419,16 @@ IPFS_GATEWAY=https://gateway.pinata.cloud
 PINATA_API_KEY=your_pinata_key
 ```
 
+## Deployments:
+
+### Sepolia:
+- CrossChainLootManager.sol : `0x194CadA5D03EF6Cd9AA51C3BB36EF64F4De174bB`
+- LootManager.sol : `0xf755e942112584C0547C3f85392B2c2Ee602161B`
+- PartyRegistry.sol : `0x93Fd309A0D457174bD94F4c7BCe60c589e6bE4D6`
+- RandomLootGenerator.sol : `0xA19D323E6A4dB37c0f0F85F8FC2F7410e4061EC3`
+
+### Avalanche
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
