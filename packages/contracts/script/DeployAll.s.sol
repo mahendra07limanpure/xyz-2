@@ -17,7 +17,8 @@ contract DeployAllContracts is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        console.log("Deploying contracts on Sepolia...");
+        uint256 deployerPrivateKey = uint256(vm.envBytes32("PRIVATE_KEY")); // ✅ CORRECT
         uint64 subscriptionId = uint64(vm.envUint("VRF_SUBSCRIPTION_ID"));
         
         vm.startBroadcast(deployerPrivateKey);

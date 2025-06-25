@@ -82,3 +82,287 @@
 {"level":"info","message":"Socket service initialized","timestamp":"2025-06-18T11:55:45.790Z"}
 {"level":"info","message":"Server running on port 3001","timestamp":"2025-06-18T11:55:45.795Z"}
 {"level":"info","message":"Database connected successfully","timestamp":"2025-06-18T11:55:45.798Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-24T09:47:34.278Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-24T09:47:34.282Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-24T09:47:34.289Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-24T09:47:34.290Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-24T09:47:34.290Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-24T09:47:34.291Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-24T09:47:34.294Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-24T09:47:34.327Z"}
+{"level":"info","message":"Client connected: eiV1kI4vvCM7Yn7-AAAC","timestamp":"2025-06-24T09:47:35.505Z"}
+{"level":"info","message":"Client connected: _HA7dtzoSphUvRrRAAAD","timestamp":"2025-06-24T09:47:35.517Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-24T10:44:37.145Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-24T10:44:37.148Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-24T10:44:37.156Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-24T10:44:37.157Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-24T10:44:37.157Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-24T10:44:37.157Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-24T10:44:37.160Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-24T10:44:37.195Z"}
+{"level":"info","message":"Client connected: Cv2hXy0bdlNjTSCBAAAC","timestamp":"2025-06-24T10:44:39.341Z"}
+{"level":"info","message":"Client connected: 2jxZbLzOId4ol_jMAAAD","timestamp":"2025-06-24T10:44:39.351Z"}
+{"level":"info","message":"Client disconnected: Cv2hXy0bdlNjTSCBAAAC","timestamp":"2025-06-24T10:45:06.209Z"}
+{"level":"info","message":"Client disconnected: 2jxZbLzOId4ol_jMAAAD","timestamp":"2025-06-24T10:45:06.211Z"}
+{"level":"info","message":"Client connected: 9fXS8A8h3BmVoUSxAAAF","timestamp":"2025-06-24T10:45:08.970Z"}
+{"level":"info","message":"Client connected: pjS6LHwxzV2CB7ywAAAH","timestamp":"2025-06-24T10:45:08.982Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T07:23:12.200Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T07:23:12.203Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T07:23:12.209Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T07:23:12.209Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T07:23:12.210Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T07:23:12.210Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T07:23:12.212Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T07:23:12.255Z"}
+{"level":"info","message":"Client connected: YH6_Ys9VGwGlRigdAAAC","timestamp":"2025-06-25T07:23:15.335Z"}
+{"level":"info","message":"Client connected: 6F5xGghSn2wMsdb5AAAD","timestamp":"2025-06-25T07:23:15.344Z"}
+{"level":"info","message":"Client disconnected: YH6_Ys9VGwGlRigdAAAC","timestamp":"2025-06-25T07:23:21.259Z"}
+{"level":"info","message":"Client disconnected: 6F5xGghSn2wMsdb5AAAD","timestamp":"2025-06-25T07:23:21.260Z"}
+{"level":"info","message":"Client connected: uDdhb6oHMogakBRPAAAG","timestamp":"2025-06-25T07:23:23.512Z"}
+{"level":"info","message":"Client connected: cnZk40LrNNksA9q3AAAH","timestamp":"2025-06-25T07:23:23.516Z"}
+{"level":"info","message":"Client disconnected: cnZk40LrNNksA9q3AAAH","timestamp":"2025-06-25T07:32:58.110Z"}
+{"level":"info","message":"Client connected: q6Soz17heSPtuGfYAAAK","timestamp":"2025-06-25T07:33:00.085Z"}
+{"level":"info","message":"Client connected: qxsRwN1VrBec320mAAAL","timestamp":"2025-06-25T07:33:00.090Z"}
+{"level":"info","message":"Client disconnected: qxsRwN1VrBec320mAAAL","timestamp":"2025-06-25T07:36:13.118Z"}
+{"level":"info","message":"Client connected: wt1aQ0WEQXWkIxwsAAAO","timestamp":"2025-06-25T07:36:15.085Z"}
+{"level":"info","message":"Client connected: zpHypHcK6ZD-bfRuAAAP","timestamp":"2025-06-25T07:36:15.091Z"}
+{"level":"info","message":"Client disconnected: zpHypHcK6ZD-bfRuAAAP","timestamp":"2025-06-25T07:36:33.100Z"}
+{"level":"info","message":"Client connected: DIM9jWplUDVCQES7AAAS","timestamp":"2025-06-25T07:36:35.085Z"}
+{"level":"info","message":"Client connected: qGHzG1VpDIq8rFSsAAAT","timestamp":"2025-06-25T07:36:35.091Z"}
+{"level":"info","message":"Client disconnected: uDdhb6oHMogakBRPAAAG","timestamp":"2025-06-25T07:38:45.106Z"}
+{"level":"info","message":"Client disconnected: wt1aQ0WEQXWkIxwsAAAO","timestamp":"2025-06-25T07:38:45.109Z"}
+{"level":"info","message":"Client disconnected: qGHzG1VpDIq8rFSsAAAT","timestamp":"2025-06-25T07:38:45.110Z"}
+{"level":"info","message":"Client disconnected: DIM9jWplUDVCQES7AAAS","timestamp":"2025-06-25T07:38:45.110Z"}
+{"level":"info","message":"Client disconnected: q6Soz17heSPtuGfYAAAK","timestamp":"2025-06-25T07:38:45.111Z"}
+{"level":"info","message":"Client connected: U4N28gJWzB8WonriAAAW","timestamp":"2025-06-25T07:38:50.090Z"}
+{"level":"info","message":"Client connected: WB9aMteNHgKm0GOFAAAX","timestamp":"2025-06-25T07:38:50.095Z"}
+{"level":"info","message":"Client connected: 6Y8xyA6iejlneyKkAAAa","timestamp":"2025-06-25T07:38:53.093Z"}
+{"level":"info","message":"Client connected: gJNo315kyj3yDoZAAAAb","timestamp":"2025-06-25T07:38:53.099Z"}
+{"level":"info","message":"Client connected: NmG_2aOitbQykVlEAAAe","timestamp":"2025-06-25T07:38:56.086Z"}
+{"level":"info","message":"Client connected: 8o0Fo16bHiXsjCAXAAAf","timestamp":"2025-06-25T07:38:56.093Z"}
+{"level":"info","message":"Client disconnected: NmG_2aOitbQykVlEAAAe","timestamp":"2025-06-25T07:39:25.101Z"}
+{"level":"info","message":"Client disconnected: 8o0Fo16bHiXsjCAXAAAf","timestamp":"2025-06-25T07:39:25.103Z"}
+{"level":"info","message":"Client connected: Y477CvSxfFMjcT_RAAAi","timestamp":"2025-06-25T07:39:28.087Z"}
+{"level":"info","message":"Client connected: WJR_srW0hnyV2yC-AAAj","timestamp":"2025-06-25T07:39:28.093Z"}
+{"level":"info","message":"Client disconnected: U4N28gJWzB8WonriAAAW","timestamp":"2025-06-25T07:39:35.082Z"}
+{"level":"info","message":"Client disconnected: WB9aMteNHgKm0GOFAAAX","timestamp":"2025-06-25T07:39:35.083Z"}
+{"level":"info","message":"Client disconnected: WJR_srW0hnyV2yC-AAAj","timestamp":"2025-06-25T07:39:36.148Z"}
+{"level":"info","message":"Client connected: jd8asahymqDj6Tl-AAAm","timestamp":"2025-06-25T07:39:38.084Z"}
+{"level":"info","message":"Client disconnected: 6Y8xyA6iejlneyKkAAAa","timestamp":"2025-06-25T07:39:38.084Z"}
+{"level":"info","message":"Client disconnected: gJNo315kyj3yDoZAAAAb","timestamp":"2025-06-25T07:39:38.085Z"}
+{"level":"info","message":"Client connected: GUgijvTKgS62cidCAAAn","timestamp":"2025-06-25T07:39:38.090Z"}
+{"level":"info","message":"Client disconnected: GUgijvTKgS62cidCAAAn","timestamp":"2025-06-25T07:40:03.107Z"}
+{"level":"info","message":"Client connected: 9kNVNrz_qCXwjyi3AAAq","timestamp":"2025-06-25T07:40:05.086Z"}
+{"level":"info","message":"Client connected: ZOTGlLRyiBfutJIeAAAr","timestamp":"2025-06-25T07:40:05.090Z"}
+{"level":"info","message":"Client disconnected: ZOTGlLRyiBfutJIeAAAr","timestamp":"2025-06-25T07:40:09.097Z"}
+{"level":"info","message":"Client connected: rEa1DtD-yWMCtUFSAAAu","timestamp":"2025-06-25T07:40:11.084Z"}
+{"level":"info","message":"Client connected: hS1fe5uwJj-fnjzSAAAv","timestamp":"2025-06-25T07:40:11.090Z"}
+{"level":"info","message":"Client disconnected: hS1fe5uwJj-fnjzSAAAv","timestamp":"2025-06-25T08:00:22.116Z"}
+{"level":"info","message":"Client connected: aUC2nC3RN02vw-CtAAAy","timestamp":"2025-06-25T08:00:24.085Z"}
+{"level":"info","message":"Client connected: LFR-R_6G_15IK6A2AAAz","timestamp":"2025-06-25T08:00:24.091Z"}
+{"level":"info","message":"Client disconnected: LFR-R_6G_15IK6A2AAAz","timestamp":"2025-06-25T08:00:38.108Z"}
+{"level":"info","message":"Client connected: 3alwqSfbex4aPEX4AAA2","timestamp":"2025-06-25T08:00:40.084Z"}
+{"level":"info","message":"Client connected: 9ofCWc9Ox29v6Y7PAAA3","timestamp":"2025-06-25T08:00:40.088Z"}
+{"level":"info","message":"Client disconnected: 9ofCWc9Ox29v6Y7PAAA3","timestamp":"2025-06-25T08:00:41.109Z"}
+{"level":"info","message":"Client connected: UK3wt-6N1vQHLbswAAA6","timestamp":"2025-06-25T08:00:43.083Z"}
+{"level":"info","message":"Client connected: 1iG-7O0PBkqY1TalAAA7","timestamp":"2025-06-25T08:00:43.087Z"}
+{"level":"info","message":"Client disconnected: 1iG-7O0PBkqY1TalAAA7","timestamp":"2025-06-25T08:01:32.110Z"}
+{"level":"info","message":"Client connected: O9x66KvEqCnuNiB4AAA-","timestamp":"2025-06-25T08:01:34.085Z"}
+{"level":"info","message":"Client connected: aw4Zb1rzXpZJqSVsAAA_","timestamp":"2025-06-25T08:01:34.092Z"}
+{"level":"info","message":"Client disconnected: aw4Zb1rzXpZJqSVsAAA_","timestamp":"2025-06-25T08:02:02.095Z"}
+{"level":"info","message":"Client connected: mpTPIovGecbuYD1hAABC","timestamp":"2025-06-25T08:02:04.085Z"}
+{"level":"info","message":"Client connected: IxiNowsyEHvwILXFAABD","timestamp":"2025-06-25T08:02:04.091Z"}
+{"level":"info","message":"Client disconnected: IxiNowsyEHvwILXFAABD","timestamp":"2025-06-25T08:02:44.105Z"}
+{"level":"info","message":"Client connected: RLIcvprYrTMhiCgYAABG","timestamp":"2025-06-25T08:02:46.083Z"}
+{"level":"info","message":"Client connected: l0_MAMrgzcV-60ONAABH","timestamp":"2025-06-25T08:02:46.089Z"}
+{"level":"info","message":"Client disconnected: Y477CvSxfFMjcT_RAAAi","timestamp":"2025-06-25T08:02:58.028Z"}
+{"level":"info","message":"Client disconnected: 9kNVNrz_qCXwjyi3AAAq","timestamp":"2025-06-25T08:02:58.032Z"}
+{"level":"info","message":"Client disconnected: jd8asahymqDj6Tl-AAAm","timestamp":"2025-06-25T08:02:58.033Z"}
+{"level":"info","message":"Client disconnected: RLIcvprYrTMhiCgYAABG","timestamp":"2025-06-25T08:02:58.034Z"}
+{"level":"info","message":"Client disconnected: mpTPIovGecbuYD1hAABC","timestamp":"2025-06-25T08:02:58.035Z"}
+{"level":"info","message":"Client disconnected: O9x66KvEqCnuNiB4AAA-","timestamp":"2025-06-25T08:02:58.036Z"}
+{"level":"info","message":"Client disconnected: UK3wt-6N1vQHLbswAAA6","timestamp":"2025-06-25T08:02:58.036Z"}
+{"level":"info","message":"Client disconnected: 3alwqSfbex4aPEX4AAA2","timestamp":"2025-06-25T08:02:58.037Z"}
+{"level":"info","message":"Client disconnected: aUC2nC3RN02vw-CtAAAy","timestamp":"2025-06-25T08:02:58.038Z"}
+{"level":"info","message":"Client disconnected: rEa1DtD-yWMCtUFSAAAu","timestamp":"2025-06-25T08:02:58.038Z"}
+{"level":"info","message":"Client disconnected: l0_MAMrgzcV-60ONAABH","timestamp":"2025-06-25T08:02:58.040Z"}
+{"level":"info","message":"Client connected: ZwKSD3H9McQ0q20UAABJ","timestamp":"2025-06-25T08:03:00.341Z"}
+{"level":"info","message":"Client connected: sXxSPbp_EPfp4lKZAABL","timestamp":"2025-06-25T08:03:00.365Z"}
+{"level":"info","message":"Client disconnected: sXxSPbp_EPfp4lKZAABL","timestamp":"2025-06-25T08:05:54.103Z"}
+{"level":"info","message":"Client connected: TjnCkYg5dUWd6Q_RAABO","timestamp":"2025-06-25T08:05:56.089Z"}
+{"level":"info","message":"Client connected: 1UJ7Qd_G33ViLP7nAABP","timestamp":"2025-06-25T08:05:56.094Z"}
+{"level":"info","message":"Client connected: kMGmBCg6AwqivLuYAABS","timestamp":"2025-06-25T08:05:57.085Z"}
+{"level":"info","message":"Client connected: ul_eArMvlruduobxAABT","timestamp":"2025-06-25T08:05:57.093Z"}
+{"level":"info","message":"Client disconnected: ul_eArMvlruduobxAABT","timestamp":"2025-06-25T08:06:16.109Z"}
+{"level":"info","message":"Client connected: oHftduNJNuep6_GNAABW","timestamp":"2025-06-25T08:06:18.085Z"}
+{"level":"info","message":"Client connected: 2Ae-Zzxhk3Y0cUchAABX","timestamp":"2025-06-25T08:06:18.089Z"}
+{"level":"info","message":"Client disconnected: 2Ae-Zzxhk3Y0cUchAABX","timestamp":"2025-06-25T08:06:20.110Z"}
+{"level":"info","message":"Client connected: bc1VP87Ai2kasMF3AABZ","timestamp":"2025-06-25T08:06:22.082Z"}
+{"level":"info","message":"Client disconnected: bc1VP87Ai2kasMF3AABZ","timestamp":"2025-06-25T08:06:40.113Z"}
+{"level":"info","message":"Client connected: 17BgH0WQUfGTEgFYAABc","timestamp":"2025-06-25T08:06:42.085Z"}
+{"level":"info","message":"Client connected: QQu0iPHKZHIOYU_VAABd","timestamp":"2025-06-25T08:06:42.091Z"}
+{"level":"info","message":"Client disconnected: QQu0iPHKZHIOYU_VAABd","timestamp":"2025-06-25T08:06:49.097Z"}
+{"level":"info","message":"Client connected: YxZ1Df7GVT10-WdRAABg","timestamp":"2025-06-25T08:06:51.109Z"}
+{"level":"info","message":"Client connected: z4_-k9DP2m22fAKZAABj","timestamp":"2025-06-25T08:06:53.085Z"}
+{"level":"info","message":"Client connected: LgJbGPLJKuu5_wGcAABk","timestamp":"2025-06-25T08:06:53.091Z"}
+{"level":"info","message":"Client disconnected: LgJbGPLJKuu5_wGcAABk","timestamp":"2025-06-25T08:07:09.105Z"}
+{"level":"info","message":"Client connected: OsUTTXulICEJoGcaAABn","timestamp":"2025-06-25T08:07:11.084Z"}
+{"level":"info","message":"Client connected: KRvRPlHDQ6lgt1zSAABo","timestamp":"2025-06-25T08:07:11.091Z"}
+{"level":"info","message":"Client disconnected: KRvRPlHDQ6lgt1zSAABo","timestamp":"2025-06-25T08:07:26.108Z"}
+{"level":"info","message":"Client connected: BOJOep4sGnnomtp5AABr","timestamp":"2025-06-25T08:07:28.082Z"}
+{"level":"info","message":"Client connected: aACkOXat3KXZLgr6AABs","timestamp":"2025-06-25T08:07:28.088Z"}
+{"level":"info","message":"Client disconnected: aACkOXat3KXZLgr6AABs","timestamp":"2025-06-25T08:07:34.110Z"}
+{"level":"info","message":"Client connected: bk_rYsG9NcQgMydMAABu","timestamp":"2025-06-25T08:07:36.083Z"}
+{"level":"info","message":"Client disconnected: bk_rYsG9NcQgMydMAABu","timestamp":"2025-06-25T08:07:37.092Z"}
+{"level":"info","message":"Client connected: _qA3Imh92zZU9q0UAABw","timestamp":"2025-06-25T08:07:39.083Z"}
+{"level":"info","message":"Client disconnected: _qA3Imh92zZU9q0UAABw","timestamp":"2025-06-25T08:07:48.107Z"}
+{"level":"info","message":"Client connected: Pkbt5HEk2nO7WATxAABz","timestamp":"2025-06-25T08:07:49.133Z"}
+{"level":"info","message":"Client connected: Xbz4o4zyjNcVm425AAB0","timestamp":"2025-06-25T08:07:49.147Z"}
+{"level":"info","message":"Client disconnected: ZwKSD3H9McQ0q20UAABJ","timestamp":"2025-06-25T08:07:51.230Z"}
+{"level":"info","message":"Client disconnected: 1UJ7Qd_G33ViLP7nAABP","timestamp":"2025-06-25T08:07:51.231Z"}
+{"level":"info","message":"Client disconnected: TjnCkYg5dUWd6Q_RAABO","timestamp":"2025-06-25T08:07:51.231Z"}
+{"level":"info","message":"Client disconnected: YxZ1Df7GVT10-WdRAABg","timestamp":"2025-06-25T08:07:51.232Z"}
+{"level":"info","message":"Client disconnected: 17BgH0WQUfGTEgFYAABc","timestamp":"2025-06-25T08:07:51.232Z"}
+{"level":"info","message":"Client disconnected: oHftduNJNuep6_GNAABW","timestamp":"2025-06-25T08:07:51.232Z"}
+{"level":"info","message":"Client disconnected: kMGmBCg6AwqivLuYAABS","timestamp":"2025-06-25T08:07:51.232Z"}
+{"level":"info","message":"Client disconnected: Xbz4o4zyjNcVm425AAB0","timestamp":"2025-06-25T08:07:51.233Z"}
+{"level":"info","message":"Client disconnected: Pkbt5HEk2nO7WATxAABz","timestamp":"2025-06-25T08:07:51.233Z"}
+{"level":"info","message":"Client disconnected: BOJOep4sGnnomtp5AABr","timestamp":"2025-06-25T08:07:51.233Z"}
+{"level":"info","message":"Client disconnected: OsUTTXulICEJoGcaAABn","timestamp":"2025-06-25T08:07:51.233Z"}
+{"level":"info","message":"Client disconnected: z4_-k9DP2m22fAKZAABj","timestamp":"2025-06-25T08:07:51.233Z"}
+{"level":"info","message":"Client connected: ltkX9gxuETQ-bpsiAAB2","timestamp":"2025-06-25T08:07:53.518Z"}
+{"level":"info","message":"Client connected: _YViX6bUrQGjc3D9AAB4","timestamp":"2025-06-25T08:07:53.547Z"}
+{"ip":"::1","level":"error","message":"Cannot read properties of undefined (reading 'getDb')","method":"POST","stack":"TypeError: Cannot read properties of undefined (reading 'getDb')\n    at connectPlayer (/home/talha/Programs/Chromion_Hack/packages/backend/src/controllers/gameController.ts:79:23)\n    at Layer.handle [as handle_request] (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/layer.js:95:5)\n    at next (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/route.js:149:13)\n    at Route.dispatch (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/route.js:119:3)\n    at Layer.handle [as handle_request] (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/layer.js:95:5)\n    at /home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:284:15\n    at Function.process_params (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:346:12)\n    at next (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:280:10)\n    at Function.handle (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:175:3)\n    at router (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:47:12)","timestamp":"2025-06-25T08:07:55.280Z","url":"/api/game/player/connect","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"error","message":"Cannot read properties of undefined (reading 'getDb')","method":"POST","stack":"TypeError: Cannot read properties of undefined (reading 'getDb')\n    at connectPlayer (/home/talha/Programs/Chromion_Hack/packages/backend/src/controllers/gameController.ts:79:23)\n    at Layer.handle [as handle_request] (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/layer.js:95:5)\n    at next (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/route.js:149:13)\n    at Route.dispatch (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/route.js:119:3)\n    at Layer.handle [as handle_request] (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/layer.js:95:5)\n    at /home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:284:15\n    at Function.process_params (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:346:12)\n    at next (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:280:10)\n    at Function.handle (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:175:3)\n    at router (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:47:12)","timestamp":"2025-06-25T08:08:08.953Z","url":"/api/game/player/connect","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:18:25.603Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:18:25.606Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:18:25.612Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:18:25.613Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:18:25.613Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:18:25.614Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:18:25.616Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:18:25.635Z"}
+{"level":"info","message":"Client connected: EfrxN-bNaWtD2UjYAAAC","timestamp":"2025-06-25T08:18:26.113Z"}
+{"level":"info","message":"Client connected: WGb-o5Tp0sLMRfaaAAAD","timestamp":"2025-06-25T08:18:26.125Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:18:28.825Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:18:28.828Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:18:28.834Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:18:28.834Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:18:28.835Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:18:28.835Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:18:28.837Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:18:28.859Z"}
+{"level":"info","message":"Client connected: bgvf7kfkEyYUUEZ7AAAB","timestamp":"2025-06-25T08:18:29.104Z"}
+{"level":"info","message":"Client connected: 2_q9eHgmdwE9_0_pAAAD","timestamp":"2025-06-25T08:18:30.092Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:18:32.890Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:18:32.894Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:18:32.901Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:18:32.902Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:18:32.902Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:18:32.903Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:18:32.905Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:18:32.918Z"}
+{"level":"info","message":"Client connected: 2gHu27V5MEj_UU1uAAAC","timestamp":"2025-06-25T08:18:33.098Z"}
+{"level":"info","message":"Client connected: hSfwNqeFECq3bhZiAAAD","timestamp":"2025-06-25T08:18:33.107Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:18:34.357Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:18:34.360Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:18:34.367Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:18:34.367Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:18:34.367Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:18:34.368Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:18:34.370Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:18:34.388Z"}
+{"level":"info","message":"Client connected: D73ge8SO-nIlZU2gAAAC","timestamp":"2025-06-25T08:18:36.095Z"}
+{"level":"info","message":"Client connected: 7GRJnqXfq7kxDAB-AAAD","timestamp":"2025-06-25T08:18:36.104Z"}
+{"level":"info","message":"Client disconnected: 7GRJnqXfq7kxDAB-AAAD","timestamp":"2025-06-25T08:18:50.699Z"}
+{"level":"info","message":"Client disconnected: D73ge8SO-nIlZU2gAAAC","timestamp":"2025-06-25T08:18:50.700Z"}
+{"level":"info","message":"Client connected: EU-SAz8WzWtbFANkAAAF","timestamp":"2025-06-25T08:18:52.961Z"}
+{"level":"info","message":"Client connected: Lv_7VkUYWT6QhKxHAAAH","timestamp":"2025-06-25T08:18:52.978Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:19:01.458Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:19:01.460Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:19:01.467Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:19:01.467Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:19:01.468Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:19:01.468Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:19:01.470Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:19:01.492Z"}
+{"level":"info","message":"Client connected: QG1lWy2C9t10FyOzAAAB","timestamp":"2025-06-25T08:19:03.485Z"}
+{"level":"info","message":"Client connected: 0azljdjdORJo5LaEAAAD","timestamp":"2025-06-25T08:19:03.623Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:19:08.891Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:19:08.894Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:19:08.900Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:19:08.900Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:19:08.901Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:19:08.901Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:19:08.903Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:19:08.922Z"}
+{"level":"info","message":"Client connected: Px8juhezcDxkuNhDAAAB","timestamp":"2025-06-25T08:19:11.177Z"}
+{"level":"info","message":"Client connected: Ayl90Fer2610ErOOAAAD","timestamp":"2025-06-25T08:19:11.405Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:19:16.720Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:19:16.723Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:19:16.729Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:19:16.729Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:19:16.730Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:19:16.730Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:19:16.732Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:19:16.746Z"}
+{"level":"info","message":"Client connected: n4565A4HZGiraOR5AAAB","timestamp":"2025-06-25T08:19:16.836Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:19:19.519Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:19:19.521Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:19:19.528Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:19:19.528Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:19:19.529Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:19:19.529Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:19:19.531Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:19:19.553Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:19:22.734Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:19:22.737Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:19:22.743Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:19:22.744Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:19:22.744Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:19:22.745Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:19:22.747Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:19:22.768Z"}
+{"ip":"::1","level":"error","message":"Cannot read properties of undefined (reading 'getDb')","method":"POST","stack":"TypeError: Cannot read properties of undefined (reading 'getDb')\n    at connectPlayer (/home/talha/Programs/Chromion_Hack/packages/backend/src/controllers/gameController.ts:79:23)\n    at Layer.handle [as handle_request] (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/layer.js:95:5)\n    at next (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/route.js:149:13)\n    at Route.dispatch (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/route.js:119:3)\n    at Layer.handle [as handle_request] (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/layer.js:95:5)\n    at /home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:284:15\n    at Function.process_params (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:346:12)\n    at next (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:280:10)\n    at Function.handle (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:175:3)\n    at router (/home/talha/Programs/Chromion_Hack/node_modules/express/lib/router/index.js:47:12)","timestamp":"2025-06-25T08:19:26.558Z","url":"/api/game/player/connect","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"}
+{"level":"info","message":"Client connected: T8XKpwRFuW4fa7ljAAAC","timestamp":"2025-06-25T08:19:27.081Z"}
+{"level":"info","message":"Client connected: Fgjp0qArFqeEkvNkAAAD","timestamp":"2025-06-25T08:19:27.090Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T08:27:44.991Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T08:27:44.994Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T08:27:45.001Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T08:27:45.002Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T08:27:45.002Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T08:27:45.002Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T08:27:45.005Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T08:27:45.019Z"}
+{"level":"info","message":"Client connected: apLa1mfB4rFINwdJAAAC","timestamp":"2025-06-25T08:27:46.107Z"}
+{"level":"info","message":"Client connected: yo00ZZ9dAhMJumIbAAAD","timestamp":"2025-06-25T08:27:46.122Z"}
+{"level":"info","message":"Client disconnected: apLa1mfB4rFINwdJAAAC","timestamp":"2025-06-25T08:28:04.821Z"}
+{"level":"info","message":"Client disconnected: yo00ZZ9dAhMJumIbAAAD","timestamp":"2025-06-25T08:28:04.822Z"}
+{"level":"info","message":"Client connected: rfHdMRuqZ0hkgfT8AAAF","timestamp":"2025-06-25T08:28:07.122Z"}
+{"level":"info","message":"Client connected: JouwzpO1vjWylnFiAAAH","timestamp":"2025-06-25T08:28:07.139Z"}
+{"level":"info","message":"Client disconnected: JouwzpO1vjWylnFiAAAH","timestamp":"2025-06-25T08:48:41.023Z"}
+{"level":"info","message":"Client connected: SCvHVYwcTQsCPvc-AAAK","timestamp":"2025-06-25T08:48:42.050Z"}
+{"level":"info","message":"Client connected: H7ZS3h4PDeqeLeU-AAAL","timestamp":"2025-06-25T08:48:42.064Z"}
+{"level":"info","message":"Client disconnected: H7ZS3h4PDeqeLeU-AAAL","timestamp":"2025-06-25T08:49:08.676Z"}
+{"level":"info","message":"Client connected: WN6MSzv8VrdjlSqyAAAO","timestamp":"2025-06-25T08:49:09.695Z"}
+{"level":"info","message":"Client connected: mCUcz_79DJkvvpLZAAAP","timestamp":"2025-06-25T08:49:09.704Z"}
+{"level":"info","message":"Client disconnected: mCUcz_79DJkvvpLZAAAP","timestamp":"2025-06-25T08:57:48.125Z"}
+{"level":"info","message":"Client connected: HJxuS7ZwyHI1U9uOAAAS","timestamp":"2025-06-25T08:57:50.086Z"}
+{"level":"info","message":"Client connected: uslBtGmFPhEWi1CLAAAT","timestamp":"2025-06-25T08:57:50.092Z"}
+{"level":"info","message":"Client disconnected: rfHdMRuqZ0hkgfT8AAAF","timestamp":"2025-06-25T08:59:24.040Z"}
+{"level":"info","message":"Client disconnected: uslBtGmFPhEWi1CLAAAT","timestamp":"2025-06-25T08:59:24.042Z"}
+{"level":"info","message":"Client disconnected: HJxuS7ZwyHI1U9uOAAAS","timestamp":"2025-06-25T08:59:24.042Z"}
+{"level":"info","message":"Client disconnected: WN6MSzv8VrdjlSqyAAAO","timestamp":"2025-06-25T08:59:24.043Z"}
+{"level":"info","message":"Client disconnected: SCvHVYwcTQsCPvc-AAAK","timestamp":"2025-06-25T08:59:24.044Z"}
+{"level":"info","message":"Client connected: rGxl89AcK7h9_vcJAAAV","timestamp":"2025-06-25T08:59:26.194Z"}
+{"level":"info","message":"Client connected: 9b7VcKzvOPoM638UAAAX","timestamp":"2025-06-25T08:59:26.214Z"}
+{"level":"info","message":"Blockchain clients initialized","timestamp":"2025-06-25T09:52:15.397Z"}
+{"level":"info","message":"Contract addresses loaded","timestamp":"2025-06-25T09:52:15.400Z"}
+{"level":"info","message":"Database initialized","timestamp":"2025-06-25T09:52:15.406Z"}
+{"level":"info","message":"ElizaOS service initialized with default agents","timestamp":"2025-06-25T09:52:15.407Z"}
+{"level":"info","message":"ElizaOS initialized","timestamp":"2025-06-25T09:52:15.407Z"}
+{"level":"info","message":"Socket service initialized","timestamp":"2025-06-25T09:52:15.407Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-06-25T09:52:15.409Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-06-25T09:52:15.429Z"}
+{"level":"info","message":"Client connected: GwKSIuamQmjjSFakAAAC","timestamp":"2025-06-25T09:52:23.655Z"}
+{"level":"info","message":"Client connected: _prLnG6FOULzavC1AAAD","timestamp":"2025-06-25T09:52:23.665Z"}

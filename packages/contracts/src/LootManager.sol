@@ -186,7 +186,8 @@ contract LootManager is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard, VRFC
         
         uint256 newTokenId = ++_tokenIds;
         
-        string memory itemName = _generateItemName(equipType, rarity, statsRandom);
+        string memory itemName = _generateItemName(equipType, rarity);
+
         
         equipment[newTokenId] = Equipment({
             tokenId: newTokenId,
@@ -251,7 +252,7 @@ contract LootManager is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard, VRFC
     /**
      * @dev Generate item name based on type and rarity
      */
-    function _generateItemName(EquipmentType equipType, Rarity rarity, uint256 seed) internal pure returns (string memory) {
+    function _generateItemName(EquipmentType equipType, Rarity rarity) internal pure returns (string memory) {
         string memory rarityPrefix = _getRarityPrefix(rarity);
         string memory typeString = _getEquipmentTypeString(equipType);
         
