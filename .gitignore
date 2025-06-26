@@ -5,5 +5,4 @@ logs
 .env
 *.log
 broadcast
-.github
 .vscode

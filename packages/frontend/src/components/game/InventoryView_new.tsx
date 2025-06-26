@@ -152,12 +152,8 @@ const InventoryView: React.FC = () => {
   };
 
   const backToDungeon = () => {
-    if (actions.setGameMode) {
-      actions.setGameMode('dungeon');
-    } else {
-      // Fallback to manual state management
-      window.location.href = '/game';
-    }
+    // Navigate back to the game page
+    window.location.href = '/game';
   };
 
   const filteredEquipment = filterEquipment(equipment);
