@@ -3,6 +3,7 @@ import { useAccount } from 'wagmi';
 import { PartyStatus, PartyRole } from '../../../shared/src/types';
 import type { Party, PartyMember } from '../../../shared/src/types';
 import { useGame } from '../contexts/GameContext';
+import { apiClient, PARTY_CREATE_ROUTE, PARTY_PLAYER_GET_ROUTE } from '../utils/routes';
 
 interface PartyInvite {
   id: string;
@@ -21,125 +22,106 @@ const PartyPage: React.FC = () => {
   const [availableParties, setAvailableParties] = useState<Party[]>([]);
   const [isCreatingParty, setIsCreatingParty] = useState(false);
   const [newPartyName, setNewPartyName] = useState('');
+  const [maxSize, setMaxSize] = useState(4); // Default max size
+  const [chainId, setChainId] = useState(11155111); // Default to Sepolia testnet
+
   const [activeTab, setActiveTab] = useState<'current' | 'browse' | 'invites'>('current');
 
   // Mock data for demonstration
   useEffect(() => {
-    // Simulate fetching party data
-    const mockParty: Party = {
-      id: '1',
-      name: 'Dragon Slayers',
-      leaderId: address || '',
-      members: [
-        {
-          playerId: '1',
-          walletAddress: address || '',
-          chainId: 1,
-          role: PartyRole.LEADER,
-          joinedAt: new Date(),
-          isOnline: true
-        },
-        {
-          playerId: '2',
-          walletAddress: '0x742d35Cc6534C0532925a3b8C6dda738d9043b52',
-          chainId: 1,
-          role: PartyRole.MEMBER,
-          joinedAt: new Date(Date.now() - 86400000),
-          isOnline: true
-        },
-        {
-          playerId: '3',
-          walletAddress: '0x8ba1f109551bD432803012645Hac136c31A426',
-          chainId: 1,
-          role: PartyRole.MEMBER,
-          joinedAt: new Date(Date.now() - 172800000),
-          isOnline: false
+    const fetchPlayerParty = async () => {
+      if (!address) return;
+  
+      try {
+        console.log('Fetching party for player:', address);
+        const response = await apiClient.get(
+          PARTY_PLAYER_GET_ROUTE.replace('{address}', address)
+        );
+        console.log('Player party response:', response);
+        if (!response.data || !response.data.data) {
+          console.warn('No party data found for player:', address);
+          return;
         }
-      ],
-      maxSize: 4,
-      createdChainId: 1,
-      status: PartyStatus.FORMING,
-      createdAt: new Date(),
-      updatedAt: new Date()
+  
+        const data = response.data?.data;
+        if (!data) return;
+  
+        const updatedParty: Party = {
+          id: data.id,
+          name: data.name,
+          leaderId: data.members.find((m: any) => m.role === 'leader')?.player.wallet || '',
+          members: data.members.map((m: any) => ({
+            playerId: m.playerId,
+            walletAddress: m.player.wallet,
+            chainId: data.chainId,
+            role: m.role,
+            joinedAt: new Date(m.createdAt),
+            isOnline: true,
+          })),
+          maxSize: data.maxSize,
+          createdChainId: data.chainId,
+          status: PartyStatus.FORMING,
+          createdAt: new Date(data.createdAt),
+          updatedAt: new Date(data.updatedAt),
+        };
+  
+        setCurrentParty(updatedParty);
+      } catch (err) {
+        console.error('Error fetching player party:', err);
+      }
     };
-
-    const mockInvites: PartyInvite[] = [
-      {
-        id: '1',
-        partyId: '2',
-        partyName: 'Mage Guild',
-        leaderName: 'Wizard0x42',
-        memberCount: 2,
-        maxSize: 3
-      },
-      {
-        id: '2',
-        partyId: '3',
-        partyName: 'Treasure Hunters',
-        leaderName: 'GoldDigger',
-        memberCount: 3,
-        maxSize: 5
-      }
-    ];
-
-    const mockAvailableParties: Party[] = [
-      {
-        id: '4',
-        name: 'Shadow Walkers',
-        leaderId: '0x123',
-        members: [
-          {
-            playerId: '4',
-            walletAddress: '0x123',
-            chainId: 1,
-            role: PartyRole.LEADER,
-            joinedAt: new Date(),
-            isOnline: true
-          }
-        ],
-        maxSize: 4,
-        createdChainId: 1,
-        status: PartyStatus.FORMING,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-
-    setCurrentParty(mockParty);
-    setPartyInvites(mockInvites);
-    setAvailableParties(mockAvailableParties);
+  
+    fetchPlayerParty();
   }, [address]);
+  
 
   const handleCreateParty = async () => {
-    if (!newPartyName.trim()) return;
-    
-    setIsCreatingParty(true);
-    // Simulate API call
-    setTimeout(() => {
-      const newParty: Party = {
-        id: Date.now().toString(),
+    if (!newPartyName.trim() || !address ) {
+      //PopUp to connect wallet or enter party name
+      alert('Please enter a party name and connect your wallet.');
+      return;
+    };
+  
+    try {
+      setIsCreatingParty(true);
+  
+      const response = await apiClient.post(PARTY_CREATE_ROUTE, {
         name: newPartyName,
-        leaderId: address || '',
-        members: [{
-          playerId: '1',
-          walletAddress: address || '',
-          chainId: 1,
-          role: PartyRole.LEADER,
-          joinedAt: new Date(),
+        playerAddress: address,
+        maxSize: maxSize,                   // or from user input
+        chainId: chainId             // or dynamic if supporting multichain
+      });
+  
+      const data = (response as { data: { data: any } }).data?.data;
+  
+      const newParty: Party = {
+        id: data.id,
+        name: data.name,
+        leaderId: address,
+        members: data.members.map((m: any) => ({
+          playerId: m.playerId,
+          walletAddress: m.player.wallet,
+          chainId: data.chainId,
+          role: m.role,
+          joinedAt: new Date(m.createdAt),
           isOnline: true
-        }],
-        maxSize: 4,
-        createdChainId: 1,
+        })),
+        maxSize: data.maxSize,
+        createdChainId: data.chainId,
         status: PartyStatus.FORMING,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date(data.createdAt),
+        updatedAt: new Date(data.updatedAt)
       };
-      
+  
       setCurrentParty(newParty);
       setNewPartyName('');
       setIsCreatingParty(false);
       setActiveTab('current');
-    }, 1000);
+    } catch (error) {
+      console.error('Create party failed:', error);
+      // Optionally show a toast or alert
+      setIsCreatingParty(false);
+    }
   };
 
   const handleJoinParty = (partyId: string) => {
@@ -185,6 +167,7 @@ const PartyPage: React.FC = () => {
           
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div  className="flex flex-col sm:flex-row gap-4">
               <input
                 type="text"
                 placeholder="Enter party name..."
@@ -192,6 +175,24 @@ const PartyPage: React.FC = () => {
                 onChange={(e) => setNewPartyName(e.target.value)}
                 className="px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
               />
+              <input
+                type="number"
+                placeholder="Enter max size..."
+                value={maxSize}
+                onChange={(e) => setMaxSize(Number(e.target.value))}
+                className="px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 w-20"
+              />
+              <select
+                value={chainId}
+                onChange={(e) => setChainId(Number(e.target.value))}
+                className="px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+              >
+                <option value={11155111}>Sepolia Testnet</option>
+                <option value={1}>Ethereum Mainnet</option>
+                <option value={137}>Polygon</option>
+                <option value={42161}>Arbitrum</option>
+              </select>
+              </div>
               <button
                 onClick={handleCreateParty}
                 disabled={isCreatingParty || !newPartyName.trim()}
