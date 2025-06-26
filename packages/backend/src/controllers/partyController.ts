@@ -10,7 +10,12 @@ export class PartyController {
 
   async createParty(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { playerId, playerAddress, name, maxSize = 4, chainId = 11155111 } = req.body;
+      const {  playerAddress, name, maxSize = 4, chainId = 11155111 } = req.body;
+
+      const player = await this.getDb().player.findUnique({
+        where: { wallet:playerAddress }
+      });
+      const playerId = player?.id;
 
       if (!playerId || !playerAddress) {
         res.status(400).json({ 
