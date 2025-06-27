@@ -26,16 +26,6 @@ export class PartyController {
         return;
       }
 
-      // Register player on blockchain if not already registered
-      try {
-        await blockchainService.registerPlayer(chainId, playerAddress);
-      } catch (error) {
-        console.error('Error registering player on blockchain:', error);
-        logger.warn('Player may already be registered on blockchain:', error);
-      }
-
-      // Create party on blockchain
-      const blockchainResult = await blockchainService.createParty(chainId, maxSize);
 
       // Create party in database
       const party = await db.party.create({  // Updated to use 'db' instead of 'this.getDb()'
@@ -65,9 +55,7 @@ export class PartyController {
       res.json({ 
         success: true, 
         data: {
-          ...party,
-          blockchainPartyId: blockchainResult.partyId.toString(),
-          transactionHash: blockchainResult.transactionHash
+          ...party
         }
       });
 
