@@ -15,6 +15,8 @@ router.post('/sync', lootController.syncEquipment.bind(lootController));
 router.post('/lend', lootController.createLendingOrder.bind(lootController));
 router.post('/borrow', lootController.borrowEquipment.bind(lootController));
 router.get('/marketplace', lootController.getMarketplace.bind(lootController));
+router.get('/user/:playerId/listings', lootController.getUserListings.bind(lootController));
+router.get('/user/:playerId/borrowed', lootController.getUserBorrowedEquipment.bind(lootController));
 router.put('/lending/:orderId', lootController.updateLendingOrder.bind(lootController));
 router.delete('/lending/:orderId', lootController.cancelLendingOrder.bind(lootController));
 

@@ -1,12 +1,202 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
 import { Equipment, LendingOffer } from '../../../../shared/src/types';
+import { apiService, Equipment as ApiEquipment } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
+import { formatPrice, formatDuration } from '../../utils/marketplaceUtils';
 
 interface MyListingsProps {
   listings: (Equipment & { lendingOffer: LendingOffer })[];
   loading: boolean;
   onCancelListing: (listingId: string) => void;
   onUpdateListing: (listingId: string, updates: Partial<LendingOffer>) => void;
+  onRefresh?: () => void;
 }
+
+interface CreateListingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const { address } = useAccount();
+  const { success, error: showError } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [userEquipment, setUserEquipment] = useState<ApiEquipment[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<string>('');
+  const [rentalFee, setRentalFee] = useState<number>(0.01);
+  const [collateralAmount, setCollateralAmount] = useState<number>(0.03);
+  const [duration, setDuration] = useState<number>(24);
+
+  // Load user's equipment when modal opens
+  useEffect(() => {
+    if (isOpen && address) {
+      loadUserEquipment();
+    }
+  }, [isOpen, address]);
+
+  const loadUserEquipment = async () => {
+    try {
+      const response = await apiService.getPlayerEquipment(address!);
+      if (response.success && response.data) {
+        // Filter out equipment that's already listed or not lendable
+        const availableEquipment = response.data.filter(equipment => 
+          equipment.isLendable && 
+          !equipment.lendingPrice // Not already listed
+        );
+        setUserEquipment(availableEquipment);
+      }
+    } catch (error) {
+      console.error('Failed to load user equipment:', error);
+    }
+  };
+
+  const handleCreateListing = async () => {
+    if (!selectedEquipment || !address) return;
+
+    try {
+      setLoading(true);
+      
+      const response = await apiService.createLendingOrder({
+        equipmentId: selectedEquipment,
+        lenderId: address,
+        price: rentalFee.toString(),
+        collateral: collateralAmount.toString(),
+        duration: duration,
+      });
+
+      if (response.success) {
+        success('Listing created successfully!');
+        onSuccess();
+        onClose();
+        resetForm();
+      } else {
+        throw new Error(response.error || 'Failed to create listing');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create listing';
+      showError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedEquipment('');
+    setRentalFee(0.01);
+    setCollateralAmount(0.03);
+    setDuration(24);
+  };
+
+  const durationOptions = [
+    { value: 1, label: '1 hour' },
+    { value: 6, label: '6 hours' },
+    { value: 12, label: '12 hours' },
+    { value: 24, label: '1 day' },
+    { value: 72, label: '3 days' },
+    { value: 168, label: '1 week' },
+  ];
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-bold text-white mb-4">Create New Listing</h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Select Equipment
+            </label>
+            <select
+              value={selectedEquipment}
+              onChange={(e) => setSelectedEquipment(e.target.value)}
+              className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+            >
+              <option value="" className="bg-gray-800">Select equipment to list...</option>
+              {userEquipment.map((equipment) => (
+                <option key={equipment.id} value={equipment.id} className="bg-gray-800">
+                  {equipment.name} ({equipment.rarity})
+                </option>
+              ))}
+            </select>
+            {userEquipment.length === 0 && (
+              <p className="text-gray-400 text-sm mt-1">
+                No lendable equipment available. Generate some loot first!
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Rental Fee (ETH)
+            </label>
+            <input
+              type="number"
+              value={rentalFee}
+              onChange={(e) => setRentalFee(Number(e.target.value))}
+              min="0.001"
+              step="0.001"
+              className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Collateral Amount (ETH)
+            </label>
+            <input
+              type="number"
+              value={collateralAmount}
+              onChange={(e) => setCollateralAmount(Number(e.target.value))}
+              min="0.001"
+              step="0.001"
+              className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+            />
+            <p className="text-gray-400 text-xs mt-1">
+              Should be higher than rental fee for security
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Duration
+            </label>
+            <select
+              value={duration}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+            >
+              {durationOptions.map((option) => (
+                <option key={option.value} value={option.value} className="bg-gray-800">
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreateListing}
+            disabled={!selectedEquipment || loading}
+            className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          >
+            {loading ? 'Creating...' : 'Create Listing'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface EditModalProps {
   listing: Equipment & { lendingOffer: LendingOffer };
@@ -16,16 +206,20 @@ interface EditModalProps {
 }
 
 const EditModal: React.FC<EditModalProps> = ({ listing, isOpen, onClose, onSave }) => {
-  const [rentalFee, setRentalFee] = useState(Number(listing.lendingOffer.rentalFee));
-  const [collateralAmount, setCollateralAmount] = useState(Number(listing.lendingOffer.collateralAmount));
+  // Convert Wei back to ETH for editing
+  const weiToEth = (wei: bigint): number => Number(wei) / 1e18;
+  const ethToWei = (eth: number): bigint => BigInt(Math.floor(eth * 1e18));
+  
+  const [rentalFee, setRentalFee] = useState(weiToEth(listing.lendingOffer.rentalFee));
+  const [collateralAmount, setCollateralAmount] = useState(weiToEth(listing.lendingOffer.collateralAmount));
   const [duration, setDuration] = useState(listing.lendingOffer.duration);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
     onSave({
-      rentalFee: BigInt(rentalFee),
-      collateralAmount: BigInt(collateralAmount),
+      rentalFee: ethToWei(rentalFee),
+      collateralAmount: ethToWei(collateralAmount),
       duration: duration,
     });
     onClose();
@@ -122,8 +316,10 @@ const EditModal: React.FC<EditModalProps> = ({ listing, isOpen, onClose, onSave 
   );
 };
 
-const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelListing, onUpdateListing }) => {
+const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelListing, onUpdateListing, onRefresh }) => {
   const [editingListing, setEditingListing] = useState<(Equipment & { lendingOffer: LendingOffer }) | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const getRarityColor = (rarity: string) => {
     const colors = {
@@ -149,12 +345,13 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
 
   const getStatusColor = (status: string) => {
     const colors = {
-      available: 'text-green-400 bg-green-400/20',
-      active: 'text-blue-400 bg-blue-400/20',
+      active: 'text-green-400 bg-green-400/20',
+      borrowed: 'text-blue-400 bg-blue-400/20',
       completed: 'text-gray-400 bg-gray-400/20',
-      cancelled: 'text-red-400 bg-red-400/20',
+      defaulted: 'text-red-400 bg-red-400/20',
+      cancelled: 'text-orange-400 bg-orange-400/20',
     };
-    return colors[status as keyof typeof colors] || colors.available;
+    return colors[status as keyof typeof colors] || colors.active;
   };
 
   const formatDuration = (seconds: number) => {
@@ -194,7 +391,10 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
         <p className="text-gray-400 mb-6">
           You haven't listed any equipment for lending yet.
         </p>
-        <button className="game-button">
+        <button 
+          onClick={() => setShowCreateModal(true)}
+          className="game-button"
+        >
           Create Listing
         </button>
       </div>
@@ -208,9 +408,12 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
           <h3 className="text-xl font-bold text-white">
             Your Listings ({listings.length})
           </h3>
-          <button className="game-button">
-            + Create New Listing
-          </button>
+        <button 
+          onClick={() => setShowCreateModal(true)} 
+          className="game-button"
+        >
+          + Create New Listing
+        </button>
         </div>
 
         {listings.map((listing) => (
@@ -241,15 +444,15 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div>
                     <div className="text-xs text-gray-400">Rental Fee</div>
-                    <div className="text-purple-400 font-bold">{Number(listing.lendingOffer.rentalFee)} ETH</div>
+                    <div className="text-purple-400 font-bold">{formatPrice(listing.lendingOffer.rentalFee)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">Collateral</div>
-                    <div className="text-blue-400 font-bold">{Number(listing.lendingOffer.collateralAmount)} ETH</div>
+                    <div className="text-blue-400 font-bold">{formatPrice(listing.lendingOffer.collateralAmount)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">Duration</div>
-                    <div className="text-green-400 font-bold">{formatDuration(listing.lendingOffer.duration)}</div>
+                    <div className="text-green-400 font-bold">{formatDuration(listing.lendingOffer.duration * 3600)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">Created</div>
@@ -285,9 +488,9 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
                 <div className="flex space-x-3">
                   <button
                     onClick={() => setEditingListing(listing)}
-                    disabled={listing.lendingOffer.status !== 'available'}
+                    disabled={listing.lendingOffer.status !== 'active'}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      listing.lendingOffer.status === 'available'
+                      listing.lendingOffer.status === 'active'
                         ? 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-600/50'
                         : 'bg-gray-600/20 text-gray-500 cursor-not-allowed'
                     }`}
@@ -296,9 +499,9 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
                   </button>
                   <button
                     onClick={() => onCancelListing(listing.lendingOffer.id)}
-                    disabled={listing.lendingOffer.status !== 'available'}
+                    disabled={listing.lendingOffer.status !== 'active'}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      listing.lendingOffer.status === 'available'
+                      listing.lendingOffer.status === 'active'
                         ? 'bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-600/50'
                         : 'bg-gray-600/20 text-gray-500 cursor-not-allowed'
                     }`}
@@ -323,6 +526,17 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
           onSave={(updates) => {
             onUpdateListing(editingListing.lendingOffer.id, updates);
             setEditingListing(null);
+          }}
+        />
+      )}
+
+      {showCreateModal && (
+        <CreateListingModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            if (onRefresh) onRefresh();
           }}
         />
       )}

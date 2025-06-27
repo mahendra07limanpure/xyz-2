@@ -332,6 +332,30 @@ class ApiService {
   async getNPCs(): Promise<ApiResponse<any[]>> {
     return this.request('/api/ai/npcs');
   }
+
+  async getUserListings(playerId: string, params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<ApiResponse<LendingOrder[]>> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    
+    const query = queryParams.toString();
+    return this.request(`/api/loot/user/${playerId}/listings${query ? `?${query}` : ''}`);
+  }
+
+  async getUserBorrowedEquipment(playerId: string, params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<ApiResponse<LendingOrder[]>> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    
+    const query = queryParams.toString();
+    return this.request(`/api/loot/user/${playerId}/borrowed${query ? `?${query}` : ''}`);
+  }
 }
 
 export const apiService = new ApiService();

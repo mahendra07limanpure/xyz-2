@@ -1,5 +1,6 @@
 import React from 'react';
 import { Equipment, LendingOffer } from '../../../../shared/src/types';
+import { formatPrice, formatDuration } from '../../utils/marketplaceUtils';
 
 interface BorrowedEquipmentProps {
   borrowedItems: (Equipment & { lendingOffer: LendingOffer })[];
@@ -111,7 +112,10 @@ const BorrowedEquipment: React.FC<BorrowedEquipmentProps> = ({ borrowedItems, lo
       </div>
 
       {borrowedItems.map((item) => {
-        const timeRemaining = item.lendingOffer.endTime ? getTimeRemaining(item.lendingOffer.endTime) : null;
+        // Calculate end time based on the lending order creation time and duration
+        const endTime = item.lendingOffer.endTime || 
+          new Date(item.lendingOffer.createdAt.getTime() + (item.lendingOffer.duration * 3600 * 1000));
+        const timeRemaining = getTimeRemaining(endTime);
         
         return (
           <div key={item.id} className={`game-card ${timeRemaining?.isExpired ? 'border-red-500/50' : ''}`}>
@@ -181,22 +185,22 @@ const BorrowedEquipment: React.FC<BorrowedEquipmentProps> = ({ borrowedItems, lo
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div>
                     <div className="text-xs text-gray-400">Rental Fee Paid</div>
-                    <div className="text-purple-400 font-bold">{Number(item.lendingOffer.rentalFee)} ETH</div>
+                    <div className="text-purple-400 font-bold">{formatPrice(item.lendingOffer.rentalFee)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">Collateral Locked</div>
-                    <div className="text-yellow-400 font-bold">{Number(item.lendingOffer.collateralAmount)} ETH</div>
+                    <div className="text-yellow-400 font-bold">{formatPrice(item.lendingOffer.collateralAmount)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">Borrowed On</div>
                     <div className="text-gray-300 text-sm">
-                      {item.lendingOffer.startTime?.toLocaleDateString() || 'N/A'}
+                      {item.lendingOffer.startTime?.toLocaleDateString() || item.lendingOffer.createdAt.toLocaleDateString()}
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">Return By</div>
                     <div className="text-gray-300 text-sm">
-                      {item.lendingOffer.endTime?.toLocaleDateString() || 'N/A'}
+                      {endTime.toLocaleDateString()}
                     </div>
                   </div>
                 </div>

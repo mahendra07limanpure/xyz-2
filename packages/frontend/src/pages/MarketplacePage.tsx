@@ -7,6 +7,7 @@ import BorrowedEquipment from '../components/marketplace/BorrowedEquipment';
 import { Equipment, LendingOffer, EquipmentType, Rarity } from '../../../shared/src/types';
 import { useMarketplace, MarketplaceFiltersState } from '../hooks/useMarketplace';
 import { MarketplaceListing } from '../services/marketplaceService';
+import { apiService } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
 interface FilterState {
@@ -28,6 +29,7 @@ const MarketplacePage: React.FC = () => {
     maxPrice: 1000,
     onlyAvailable: true,
   });
+  const [generatingLoot, setGeneratingLoot] = useState(false);
 
   // Use the marketplace hook
   const {
@@ -56,7 +58,7 @@ const MarketplacePage: React.FC = () => {
       onlyAvailable: filters.onlyAvailable,
     };
     fetchListings(initialFilters);
-  }, []); // Only run on mount
+  }, [fetchListings]); // Add fetchListings as dependency
 
   // Handle filter changes and refetch data
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
@@ -157,6 +159,44 @@ const MarketplacePage: React.FC = () => {
     }
   };
 
+  // Add dev loot generation for testing
+  const generateTestLoot = async () => {
+    if (generatingLoot) return;
+    
+    try {
+      setGeneratingLoot(true);
+      const testAddress = address || '0x1234567890123456789012345678901234567890';
+      
+      const response = await fetch('http://localhost:3001/api/loot/generate-dev', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          playerId: testAddress,
+          playerAddress: testAddress,
+          dungeonLevel: Math.floor(Math.random() * 5) + 1,
+          chainId: 11155111
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        success(`Generated ${data.data?.name}! 🎉`);
+        // Refresh the listings
+        refetch();
+      } else {
+        throw new Error(data.error || 'Failed to generate loot');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate loot';
+      showError(errorMessage);
+    } finally {
+      setGeneratingLoot(false);
+    }
+  };
+
   const tabs = [
     { key: 'browse', label: '🛒 Browse Equipment', count: filteredEquipment.length },
     { key: 'mylisting', label: '📝 My Listings', count: myListings.length },
@@ -173,14 +213,24 @@ const MarketplacePage: React.FC = () => {
               Lend and borrow powerful equipment across chains. Earn fees or access gear you need for your adventures.
             </p>
           </div>
-          <button
-            onClick={refetch}
-            disabled={loading}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center space-x-2"
-          >
-            <span>🔄</span>
-            <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={generateTestLoot}
+              disabled={generatingLoot}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <span>🎲</span>
+              <span>{generatingLoot ? 'Generating...' : 'Generate Test Loot'}</span>
+            </button>
+            <button
+              onClick={refetch}
+              disabled={loading}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <span>🔄</span>
+              <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          </div>
         </div>
         {error && (
           <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
@@ -241,20 +291,41 @@ const MarketplacePage: React.FC = () => {
       )}
 
       {activeTab === 'mylisting' && (
-        <MyListings 
-          listings={myListings}
-          loading={loading}
-          onCancelListing={onCancelListing}
-          onUpdateListing={onUpdateListing}
-        />
+        address ? (
+          <MyListings 
+            listings={myListings}
+            loading={loading}
+            onCancelListing={onCancelListing}
+            onUpdateListing={onUpdateListing}
+            onRefresh={refetch}
+          />
+        ) : (
+          <div className="glass-morphism p-12 rounded-lg text-center">
+            <div className="text-6xl mb-4">👛</div>
+            <h3 className="text-xl font-bold text-white mb-2">Wallet Not Connected</h3>
+            <p className="text-gray-400 mb-6">
+              Connect your wallet to view and manage your equipment listings.
+            </p>
+          </div>
+        )
       )}
 
       {activeTab === 'borrowed' && (
-        <BorrowedEquipment 
-          borrowedItems={borrowedEquipment}
-          loading={loading}
-          onReturn={onReturn}
-        />
+        address ? (
+          <BorrowedEquipment 
+            borrowedItems={borrowedEquipment}
+            loading={loading}
+            onReturn={onReturn}
+          />
+        ) : (
+          <div className="glass-morphism p-12 rounded-lg text-center">
+            <div className="text-6xl mb-4">👛</div>
+            <h3 className="text-xl font-bold text-white mb-2">Wallet Not Connected</h3>
+            <p className="text-gray-400 mb-6">
+              Connect your wallet to view your borrowed equipment.
+            </p>
+          </div>
+        )
       )}
     </div>
   );

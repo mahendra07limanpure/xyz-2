@@ -79,6 +79,32 @@ export class LootController {
         return;
       }
 
+      // Ensure player exists, create if not
+      let player = await this.getDb().player.findUnique({
+        where: { id: playerId }
+      });
+
+      if (!player) {
+        // Try to find by wallet address first
+        player = await this.getDb().player.findUnique({
+          where: { wallet: playerAddress }
+        });
+
+        if (!player) {
+          // Create new player
+          player = await this.getDb().player.create({
+            data: {
+              id: playerId,
+              wallet: playerAddress,
+              username: `Player_${playerId.slice(-6)}`,
+              level: 1,
+              experience: 0
+            }
+          });
+          logger.info(`Created new player for dev loot generation: ${playerId}`);
+        }
+      }
+
       // Generate random equipment
       const equipment = this.generateRandomEquipment(dungeonLevel);
       
@@ -91,7 +117,7 @@ export class LootController {
         data: {
           ...equipmentData,
           tokenId: fakeTokenId.toString(),
-          ownerId: playerId,
+          ownerId: player.id,
           isLendable: true, // Make equipment lendable by default
         }
       });
@@ -101,7 +127,8 @@ export class LootController {
         data: {
           ...createdEquipment,
           transactionHash: '0xfake_dev_transaction_hash',
-          chainId
+          chainId,
+          playerId: player.id
         }
       });
     } catch (error) {
@@ -287,12 +314,12 @@ export class LootController {
         return;
       }
 
-      // Update lending order
+      // Update lending order to show it's borrowed
       const updatedOrder = await this.getDb().lendingOrder.update({
         where: { id: orderId },
         data: {
           borrowerId,
-          status: 'completed'
+          status: 'borrowed' // Change status to borrowed instead of completed
         },
         include: {
           equipment: {
@@ -524,6 +551,81 @@ export class LootController {
 
     } catch (error) {
       logger.error('Sync equipment error:', error);
+      next(error);
+    }
+  }
+
+  async getUserListings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { playerId } = req.params;
+      const { limit = 20, offset = 0 } = req.query;
+
+      if (!playerId) {
+        res.status(400).json({ success: false, message: 'Player ID is required' });
+        return;
+      }
+
+      // Get orders where user is the lender (their listings)
+      const myListings = await this.getDb().lendingOrder.findMany({
+        where: {
+          lenderId: playerId,
+          expiresAt: { gt: new Date() } // Only get non-expired orders
+        },
+        include: {
+          equipment: {
+            include: {
+              owner: {
+                select: { id: true, username: true, wallet: true }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: Number(limit),
+        skip: Number(offset)
+      });
+
+      res.json({ success: true, data: myListings });
+    } catch (error) {
+      logger.error('Get user listings error:', error);
+      next(error);
+    }
+  }
+
+  async getUserBorrowedEquipment(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { playerId } = req.params;
+      const { limit = 20, offset = 0 } = req.query;
+
+      if (!playerId) {
+        res.status(400).json({ success: false, message: 'Player ID is required' });
+        return;
+      }
+
+      // Get orders where user is the borrower and status is borrowed
+      const borrowedEquipment = await this.getDb().lendingOrder.findMany({
+        where: {
+          borrowerId: playerId,
+          status: 'borrowed',
+          expiresAt: { gt: new Date() } // Only get non-expired orders
+        },
+        include: {
+          equipment: {
+            include: {
+              owner: {
+                select: { id: true, username: true, wallet: true }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: Number(limit),
+        skip: Number(offset)
+      });
+
+      res.json({ success: true, data: borrowedEquipment });
+    } catch (error) {
+      logger.error('Get user borrowed equipment error:', error);
       next(error);
     }
   }

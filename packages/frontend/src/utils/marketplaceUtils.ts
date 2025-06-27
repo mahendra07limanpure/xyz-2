@@ -6,7 +6,16 @@ import { Equipment, EquipmentType, Rarity, LendingStatus } from '../../../shared
 
 export const formatPrice = (price: bigint | string | number): string => {
   try {
-    const priceNum = typeof price === 'bigint' ? Number(price) : Number(price);
+    let priceNum: number;
+    if (typeof price === 'string') {
+      priceNum = parseFloat(price);
+    } else if (typeof price === 'bigint') {
+      // Convert Wei back to ETH
+      priceNum = Number(price) / 1e18;
+    } else {
+      priceNum = price;
+    }
+    
     if (priceNum < 0.001) {
       return `${(priceNum * 1000).toFixed(0)} mETH`;
     }
