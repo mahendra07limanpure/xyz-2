@@ -58,6 +58,9 @@ export class Enhanced2DScene extends Phaser.Scene {
   }
 
   create() {
+    // Reset player stats to ensure fresh start
+    this.resetPlayerStats();
+    
     // Get current level
     const currentLevel = this.levelManager.getCurrentLevel();
     const bounds = this.levelManager.getWorldBounds();
@@ -561,6 +564,8 @@ export class Enhanced2DScene extends Phaser.Scene {
     // Add restart functionality
     const restartKey = this.input.keyboard!.addKey('R');
     restartKey.on('down', () => {
+      // Reset player stats before restarting
+      this.resetPlayerStats();
       this.scene.restart();
     });
     
@@ -631,8 +636,22 @@ export class Enhanced2DScene extends Phaser.Scene {
     // Add restart functionality
     const restartKey = this.input.keyboard!.addKey('R');
     restartKey.on('down', () => {
+      // Reset player stats before restarting
+      this.resetPlayerStats();
       this.scene.restart();
     });
+  }
+
+  private resetPlayerStats() {
+    // Reset player stats to initial values
+    this.playerStats = {
+      health: 100,
+      maxHealth: 100,
+      mana: 50,
+      maxMana: 50,
+      level: 1,
+      experience: 0
+    };
   }
 
   private collectLoot(loot: Phaser.Physics.Arcade.Sprite) {

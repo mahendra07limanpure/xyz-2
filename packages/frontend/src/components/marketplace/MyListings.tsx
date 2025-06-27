@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAccount } from 'wagmi';
 import { Equipment, LendingOffer } from '../../../../shared/src/types';
 import { apiService, Equipment as ApiEquipment } from '../../services/api';
@@ -29,26 +30,38 @@ const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, onClose
   const [collateralAmount, setCollateralAmount] = useState<number>(0.03);
   const [duration, setDuration] = useState<number>(24);
 
-  // Load user's equipment when modal opens
+  // Fetch user's equipment when modal opens
   useEffect(() => {
     if (isOpen && address) {
-      loadUserEquipment();
+      fetchUserEquipment();
     }
   }, [isOpen, address]);
 
-  const loadUserEquipment = async () => {
+  const fetchUserEquipment = async () => {
     try {
-      const response = await apiService.getPlayerEquipment(address!);
-      if (response.success && response.data) {
-        // Filter out equipment that's already listed or not lendable
-        const availableEquipment = response.data.filter(equipment => 
-          equipment.isLendable && 
-          !equipment.lendingPrice // Not already listed
-        );
-        setUserEquipment(availableEquipment);
+      setLoading(true);
+      // First get the user's player ID
+      const playerResponse = await apiService.getPlayer(address!);
+      if (!playerResponse.success || !playerResponse.data) {
+        throw new Error('Player not found');
+      }
+      
+      const equipment = await apiService.getPlayerEquipment(playerResponse.data.id);
+      if (!equipment.success || !equipment.data) {
+        throw new Error('Failed to fetch equipment');
+      }
+      
+      // Filter out equipment that's already listed (you may need to add this logic based on your data structure)
+      const availableEquipment = equipment.data; // For now, show all equipment
+      setUserEquipment(availableEquipment);
+      if (availableEquipment.length > 0) {
+        setSelectedEquipment(availableEquipment[0].id);
       }
     } catch (error) {
-      console.error('Failed to load user equipment:', error);
+      console.error('Error fetching user equipment:', error);
+      showError('Failed to load your equipment');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -58,141 +71,165 @@ const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, onClose
     try {
       setLoading(true);
       
-      const response = await apiService.createLendingOrder({
-        equipmentId: selectedEquipment,
-        lenderId: address,
-        price: rentalFee.toString(),
-        collateral: collateralAmount.toString(),
-        duration: duration,
-      });
-
-      if (response.success) {
-        success('Listing created successfully!');
-        onSuccess();
-        onClose();
-        resetForm();
-      } else {
-        throw new Error(response.error || 'Failed to create listing');
+      // Get player ID
+      const playerResponse = await apiService.getPlayer(address);
+      if (!playerResponse.success || !playerResponse.data) {
+        throw new Error('Player not found');
       }
+
+      const listingData = {
+        equipmentId: selectedEquipment,
+        lenderId: playerResponse.data.id,
+        price: (rentalFee * 1e18).toString(), // Convert to Wei string
+        collateral: (collateralAmount * 1e18).toString(), // Convert to Wei string
+        duration: duration * 3600, // Convert hours to seconds
+      };
+
+      const response = await apiService.createLendingOrder(listingData);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to create listing');
+      }
+      
+      success('Listing created successfully!');
+      onSuccess();
+      onClose();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create listing';
-      showError(errorMessage);
+      console.error('Error creating listing:', error);
+      showError(error instanceof Error ? error.message : 'Failed to create listing');
     } finally {
       setLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setSelectedEquipment('');
-    setRentalFee(0.01);
-    setCollateralAmount(0.03);
-    setDuration(24);
-  };
+  if (!isOpen) return null;
 
   const durationOptions = [
     { value: 1, label: '1 hour' },
     { value: 6, label: '6 hours' },
     { value: 12, label: '12 hours' },
     { value: 24, label: '1 day' },
+    { value: 48, label: '2 days' },
     { value: 72, label: '3 days' },
     { value: 168, label: '1 week' },
   ];
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-bold text-white mb-4">Create New Listing</h3>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Select Equipment
-            </label>
-            <select
-              value={selectedEquipment}
-              onChange={(e) => setSelectedEquipment(e.target.value)}
-              className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-            >
-              <option value="" className="bg-gray-800">Select equipment to list...</option>
-              {userEquipment.map((equipment) => (
-                <option key={equipment.id} value={equipment.id} className="bg-gray-800">
-                  {equipment.name} ({equipment.rarity})
-                </option>
-              ))}
-            </select>
-            {userEquipment.length === 0 && (
-              <p className="text-gray-400 text-sm mt-1">
-                No lendable equipment available. Generate some loot first!
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Rental Fee (ETH)
-            </label>
-            <input
-              type="number"
-              value={rentalFee}
-              onChange={(e) => setRentalFee(Number(e.target.value))}
-              min="0.001"
-              step="0.001"
-              className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Collateral Amount (ETH)
-            </label>
-            <input
-              type="number"
-              value={collateralAmount}
-              onChange={(e) => setCollateralAmount(Number(e.target.value))}
-              min="0.001"
-              step="0.001"
-              className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-            />
-            <p className="text-gray-400 text-xs mt-1">
-              Should be higher than rental fee for security
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Duration
-            </label>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-            >
-              {durationOptions.map((option) => (
-                <option key={option.value} value={option.value} className="bg-gray-800">
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="flex space-x-3 mt-6">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white">Create New Listing</h3>
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+            className="text-gray-400 hover:text-white text-2xl"
           >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreateListing}
-            disabled={!selectedEquipment || loading}
-            className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-          >
-            {loading ? 'Creating...' : 'Create Listing'}
+            ×
           </button>
         </div>
+
+        {loading && !userEquipment.length ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading your equipment...</p>
+          </div>
+        ) : userEquipment.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">📦</div>
+            <p className="text-gray-400 mb-4">You don't have any equipment available for listing.</p>
+            <p className="text-sm text-gray-500">Generate some loot first to create listings!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Select Equipment
+              </label>
+              <select
+                value={selectedEquipment}
+                onChange={(e) => setSelectedEquipment(e.target.value)}
+                className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+              >
+                {userEquipment.map((item) => (
+                  <option key={item.id} value={item.id} className="bg-gray-800">
+                    {item.name} ({item.equipmentType} • {item.rarity})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Rental Fee (ETH)
+              </label>
+              <input
+                type="number"
+                value={rentalFee}
+                onChange={(e) => setRentalFee(Number(e.target.value))}
+                min="0"
+                step="0.001"
+                className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                placeholder="0.01"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Collateral Amount (ETH)
+              </label>
+              <input
+                type="number"
+                value={collateralAmount}
+                onChange={(e) => setCollateralAmount(Number(e.target.value))}
+                min="0"
+                step="0.001"
+                className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                placeholder="0.03"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Collateral should typically be higher than rental fee
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Rental Duration
+              </label>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-black/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+              >
+                {durationOptions.map((option) => (
+                  <option key={option.value} value={option.value} className="bg-gray-800">
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex space-x-3 pt-4">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateListing}
+                disabled={loading || !selectedEquipment}
+                className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Creating...' : 'Create Listing'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -319,7 +356,6 @@ const EditModal: React.FC<EditModalProps> = ({ listing, isOpen, onClose, onSave 
 const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelListing, onUpdateListing, onRefresh }) => {
   const [editingListing, setEditingListing] = useState<(Equipment & { lendingOffer: LendingOffer }) | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const getRarityColor = (rarity: string) => {
     const colors = {
@@ -385,20 +421,36 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
 
   if (listings.length === 0) {
     return (
-      <div className="glass-morphism p-12 rounded-lg text-center">
-        <div className="text-6xl mb-4">📝</div>
-        <h3 className="text-xl font-bold text-white mb-2">No Active Listings</h3>
-        <p className="text-gray-400 mb-6">
-          You haven't listed any equipment for lending yet.
-        </p>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="game-button"
-        >
-          Create Listing
-        </button>
+      <>
+        <div className="glass-morphism p-12 rounded-lg text-center">
+          <div className="text-6xl mb-4">📝</div>
+          <h3 className="text-xl font-bold text-white mb-2">No Active Listings</h3>
+          <p className="text-gray-400 mb-6">
+            You haven't listed any equipment for lending yet.
+          </p>        <div className="space-x-3">
+          <button 
+            onClick={() => {
+              console.log('Create Listing button clicked, setting modal to true');
+              setShowCreateModal(true);
+            }}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
+          >
+            Create Listing
+          </button>
+        </div>
       </div>
-    );
+
+      {/* Modals */}
+      <CreateListingModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          setShowCreateModal(false);
+          if (onRefresh) onRefresh();
+        }}
+      />
+    </>
+  );
   }
 
   return (
@@ -408,12 +460,12 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
           <h3 className="text-xl font-bold text-white">
             Your Listings ({listings.length})
           </h3>
-        <button 
-          onClick={() => setShowCreateModal(true)} 
-          className="game-button"
-        >
-          + Create New Listing
-        </button>
+          <button 
+            onClick={() => setShowCreateModal(true)} 
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
+          >
+            + Create New Listing
+          </button>
         </div>
 
         {listings.map((listing) => (
@@ -530,16 +582,14 @@ const MyListings: React.FC<MyListingsProps> = ({ listings, loading, onCancelList
         />
       )}
 
-      {showCreateModal && (
-        <CreateListingModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            setShowCreateModal(false);
-            if (onRefresh) onRefresh();
-          }}
-        />
-      )}
+      <CreateListingModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          setShowCreateModal(false);
+          if (onRefresh) onRefresh();
+        }}
+      />
     </>
   );
 };
