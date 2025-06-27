@@ -149,10 +149,10 @@ const EquipmentListing: React.FC<EquipmentListingProps> = ({ equipment, loading,
                 </div>
                 <div className="text-right">
                   <div className="text-xl font-bold text-purple-400">
-                    {Number(item.lendingOffer.rentalFee)} ETH
+                    {formatPrice(item.lendingOffer.rentalFee)} ETH
                   </div>
                   <div className="text-xs text-gray-400">
-                    {formatDuration(item.lendingOffer.duration)}
+                    {formatDuration(item.lendingOffer.duration * 3600)}
                   </div>
                 </div>
               </div>
@@ -210,20 +210,21 @@ const EquipmentListing: React.FC<EquipmentListingProps> = ({ equipment, loading,
                   </div>
                   <div className="flex items-center space-x-1">
                     <span>💰</span>
-                    <span>Collateral: {Number(item.lendingOffer.collateralAmount)} ETH</span>
+                    <span>Collateral: {formatPrice(item.lendingOffer.collateralAmount)}</span>
                   </div>
                 </div>
 
                 <button
                   onClick={() => onBorrow(item.id)}
-                  disabled={item.lendingOffer.status !== 'available'}
+                  disabled={item.lendingOffer.status !== 'active'}
                   className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                    item.lendingOffer.status === 'available'
+                    item.lendingOffer.status === 'active'
                       ? 'bg-purple-600 hover:bg-purple-700 text-white'
                       : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {item.lendingOffer.status === 'available' ? 'Borrow' : 'Unavailable'}
+                  {item.lendingOffer.status === 'active' ? 'Borrow' : 
+                   item.lendingOffer.status === 'borrowed' ? 'Currently Borrowed' : 'Unavailable'}
                 </button>
               </div>
             </div>

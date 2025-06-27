@@ -33,6 +33,14 @@ export interface UserListings {
 
 class MarketplaceService {
   /**
+   * Convert ETH value to Wei (BigInt)
+   * Handles both integer and decimal string values
+   */
+  private ethToWei(ethValue: string): bigint {
+    return BigInt(Math.floor(parseFloat(ethValue) * 1e18));
+  }
+
+  /**
    * Get all marketplace listings with optional filters
    */
   async getMarketplaceListings(filters?: MarketplaceFilters): Promise<MarketplaceData> {
@@ -92,8 +100,8 @@ class MarketplaceService {
           equipmentId: order.equipmentId,
           lenderId: order.lenderId,
           borrowerId: order.borrowerId,
-          collateralAmount: BigInt(order.collateral),
-          rentalFee: BigInt(order.price),
+          collateralAmount: this.ethToWei(order.collateral),
+          rentalFee: this.ethToWei(order.price),
           duration: order.duration,
           status: order.status as any,
           chainId: (order.equipment as any).chainId || 1,
@@ -134,68 +142,55 @@ class MarketplaceService {
    */
   async getUserListings(playerId: string): Promise<UserListings> {
     try {
-      const [playerEquipmentResponse, marketplaceResponse] = await Promise.all([
-        apiService.getPlayerEquipment(playerId),
-        apiService.getMarketplace({ limit: 1000 }) // Get all to filter user's items
+      const [listingsResponse, borrowedResponse] = await Promise.all([
+        apiService.getUserListings(playerId),
+        apiService.getUserBorrowedEquipment(playerId)
       ]);
 
-      if (!playerEquipmentResponse.success || !marketplaceResponse.success) {
+      if (!listingsResponse.success || !borrowedResponse.success) {
         throw new Error('Failed to fetch user listings');
       }
 
-      const playerEquipment = playerEquipmentResponse.data || [];
-      const allOrders = marketplaceResponse.data?.orders || [];
+      const myListingsData = listingsResponse.data || [];
+      const borrowedData = borrowedResponse.data || [];
 
-      // Find lending orders for player's equipment
-      const myListings: MarketplaceListing[] = [];
-      const borrowedEquipment: MarketplaceListing[] = [];
-
-      allOrders.forEach(order => {
-        const listing: MarketplaceListing = {
-          id: order.equipment.id,
-          tokenId: parseInt(order.equipment.tokenId),
-          name: order.equipment.name,
-          description: (order.equipment as any).description || '',
-          equipmentType: order.equipment.equipmentType as EquipmentType,
-          rarity: order.equipment.rarity as Rarity,
-          stats: {
-            attackPower: order.equipment.attackPower,
-            defensePower: order.equipment.defensePower,
-            magicPower: order.equipment.magicPower,
-          },
-          durability: (order.equipment as any).durability || 100,
-          maxDurability: (order.equipment as any).maxDurability || 100,
-          isLendable: order.equipment.isLendable,
-          ownerId: order.equipment.ownerId,
-          originalOwnerId: order.equipment.ownerId,
+      const transformOrder = (order: any): MarketplaceListing => ({
+        id: order.equipment.id,
+        tokenId: parseInt(order.equipment.tokenId),
+        name: order.equipment.name,
+        description: (order.equipment as any).description || '',
+        equipmentType: order.equipment.equipmentType as EquipmentType,
+        rarity: order.equipment.rarity as Rarity,
+        stats: {
+          attackPower: order.equipment.attackPower,
+          defensePower: order.equipment.defensePower,
+          magicPower: order.equipment.magicPower,
+        },
+        durability: (order.equipment as any).durability || 100,
+        maxDurability: (order.equipment as any).maxDurability || 100,
+        isLendable: order.equipment.isLendable,
+        ownerId: order.equipment.ownerId,
+        originalOwnerId: order.equipment.ownerId,
+        chainId: (order.equipment as any).chainId || 1,
+        contractAddress: (order.equipment as any).contractAddress || '',
+        createdAt: new Date(order.equipment.createdAt),
+        lendingOffer: {
+          id: order.id,
+          equipmentId: order.equipmentId,
+          lenderId: order.lenderId,
+          borrowerId: order.borrowerId,
+          collateralAmount: this.ethToWei(order.collateral),
+          rentalFee: this.ethToWei(order.price),
+          duration: order.duration,
+          status: order.status as any,
           chainId: (order.equipment as any).chainId || 1,
           contractAddress: (order.equipment as any).contractAddress || '',
-          createdAt: new Date(order.equipment.createdAt),
-          lendingOffer: {
-            id: order.id,
-            equipmentId: order.equipmentId,
-            lenderId: order.lenderId,
-            borrowerId: order.borrowerId,
-            collateralAmount: BigInt(order.collateral),
-            rentalFee: BigInt(order.price),
-            duration: order.duration,
-            status: order.status as any,
-            chainId: (order.equipment as any).chainId || 1,
-            contractAddress: (order.equipment as any).contractAddress || '',
-            createdAt: new Date(order.createdAt),
-          }
-        };
-
-        // Check if this is user's listing
-        if (order.lenderId === playerId) {
-          myListings.push(listing);
-        }
-
-        // Check if this is user's borrowed equipment
-        if (order.borrowerId === playerId && order.status === 'active') {
-          borrowedEquipment.push(listing);
+          createdAt: new Date(order.createdAt),
         }
       });
+
+      const myListings = myListingsData.map(transformOrder);
+      const borrowedEquipment = borrowedData.map(transformOrder);
 
       return {
         myListings,

@@ -91,7 +91,12 @@ export const useMarketplace = (initialFilters?: Partial<MarketplaceFiltersState>
   }, []);
 
   const fetchUserListings = useCallback(async () => {
-    if (!address) return;
+    if (!address) {
+      // If no wallet connected, clear user-specific data but don't show error
+      setMyListings([]);
+      setBorrowedEquipment([]);
+      return;
+    }
     
     try {
       setError(null);
@@ -193,12 +198,7 @@ export const useMarketplace = (initialFilters?: Partial<MarketplaceFiltersState>
 
   // Fetch user-specific data when address changes
   useEffect(() => {
-    if (address) {
-      fetchUserListings();
-    } else {
-      setMyListings([]);
-      setBorrowedEquipment([]);
-    }
+    fetchUserListings(); // Always call, it will handle the no-address case
   }, [address, fetchUserListings]);
 
   return {
