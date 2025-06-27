@@ -20,7 +20,7 @@ export const PARTY_CREATE_ROUTE = `${PARTY_ROUTE}/create`;
 export const PARTY_JOIN_ROUTE = `${PARTY_ROUTE}/join`;
 export const PARTY_LEAVE_ROUTE = `${PARTY_ROUTE}/leave`;
 export const PARTY_GET_ROUTE = `${PARTY_ROUTE}/{partyId}`;
-export const PARTY_PLAYER_GET_ROUTE = `${PARTY_ROUTE}/player/{playerId}`;
+export const PARTY_PLAYER_GET_ROUTE = `${PARTY_ROUTE}/player/{address}`;
 export const PARTY_UPDATE_ROUTE = `${PARTY_ROUTE}/{partyId}`;
 export const PARTY_DISBAND_ROUTE = `${PARTY_ROUTE}/{partyId}`;
 

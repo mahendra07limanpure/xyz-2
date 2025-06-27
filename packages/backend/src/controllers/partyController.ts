@@ -10,7 +10,13 @@ export class PartyController {
 
   async createParty(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { playerId, playerAddress, name, maxSize = 4, chainId = 11155111 } = req.body;
+      const {  playerAddress, name, maxSize = 4, chainId = 11155111 } = req.body;
+      const db= getDatabase();
+
+      const player = await db.player.findUnique({
+        where: { wallet: playerAddress }
+      });
+      const playerId = player?.id;
 
       if (!playerId || !playerAddress) {
         res.status(400).json({ 
@@ -20,18 +26,9 @@ export class PartyController {
         return;
       }
 
-      // Register player on blockchain if not already registered
-      try {
-        await blockchainService.registerPlayer(chainId, playerAddress);
-      } catch (error) {
-        logger.warn('Player may already be registered on blockchain:', error);
-      }
-
-      // Create party on blockchain
-      const blockchainResult = await blockchainService.createParty(chainId, maxSize);
 
       // Create party in database
-      const party = await this.getDb().party.create({
+      const party = await db.party.create({  // Updated to use 'db' instead of 'this.getDb()'
         data: {
           name,
           maxSize,
@@ -58,9 +55,7 @@ export class PartyController {
       res.json({ 
         success: true, 
         data: {
-          ...party,
-          blockchainPartyId: blockchainResult.partyId.toString(),
-          transactionHash: blockchainResult.transactionHash
+          ...party
         }
       });
 
@@ -221,7 +216,8 @@ export class PartyController {
     try {
       const { partyId } = req.params;
 
-      const party = await this.getDb().party.findUnique({
+
+      const party = await getDatabase().party.findUnique({
         where: { id: partyId },
         include: {
           members: {
@@ -256,9 +252,22 @@ export class PartyController {
 
   async getPlayerParty(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { playerId } = req.params;
-
-      const membership = await this.getDb().partyMember.findFirst({
+      const { address } = req.params;
+      const db = getDatabase();
+      const player = await db.player.findUnique({
+        where: { wallet: address }
+      });
+      console.log('Player found:', player);
+      
+      if (!player) {
+        res.status(404).json({
+          success: false,
+          message: 'Player not found'
+        });
+        return;
+      }
+      const playerId = player?.id;
+      const membership = await db.partyMember.findFirst({
         where: {
           playerId,
           party: { isActive: true }
