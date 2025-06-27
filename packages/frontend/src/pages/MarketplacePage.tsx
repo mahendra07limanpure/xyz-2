@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import EquipmentListing from '../components/marketplace/EquipmentListing';
 import SearchFilters from '../components/marketplace/SearchFilters';
 import MyListings from '../components/marketplace/MyListings';
 import BorrowedEquipment from '../components/marketplace/BorrowedEquipment';
 import { Equipment, LendingOffer, EquipmentType, Rarity } from '../../../shared/src/types';
+import { useMarketplace, MarketplaceFiltersState } from '../hooks/useMarketplace';
+import { MarketplaceListing } from '../services/marketplaceService';
+import { useToast } from '../contexts/ToastContext';
 
 interface FilterState {
   search: string;
@@ -16,6 +19,7 @@ interface FilterState {
 
 const MarketplacePage: React.FC = () => {
   const { address } = useAccount();
+  const { success, error: showError } = useToast();
   const [activeTab, setActiveTab] = useState<'browse' | 'mylisting' | 'borrowed'>('browse');
   const [filters, setFilters] = useState<FilterState>({
     search: '',
@@ -25,131 +29,133 @@ const MarketplacePage: React.FC = () => {
     onlyAvailable: true,
   });
 
-  // Mock data - replace with actual API calls
-  const [equipmentListings, setEquipmentListings] = useState<(Equipment & { lendingOffer: LendingOffer })[]>([]);
-  const [myListings, setMyListings] = useState<(Equipment & { lendingOffer: LendingOffer })[]>([]);
-  const [borrowedEquipment, setBorrowedEquipment] = useState<(Equipment & { lendingOffer: LendingOffer })[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use the marketplace hook
+  const {
+    listings,
+    myListings,
+    borrowedEquipment,
+    loading,
+    error,
+    pagination,
+    fetchListings,
+    borrowEquipment: handleBorrowEquipment,
+    cancelListing: handleCancelListing,
+    returnEquipment: handleReturnEquipment,
+    updateListing: handleUpdateListing,
+    clearError,
+    refetch
+  } = useMarketplace();
 
+  // Load initial data on mount
   useEffect(() => {
-    // Simulate API call
-    const fetchMarketplaceData = async () => {
-      setLoading(true);
-      // Mock data
-      const mockEquipment = [
-        {
-          id: '1',
-          tokenId: 1001,
-          name: 'Dragon Slayer Sword',
-          description: 'A legendary blade forged from dragon scales',
-          equipmentType: 'weapon' as EquipmentType,
-          rarity: 'legendary' as Rarity,
-          stats: { attackPower: 45, defensePower: 5, magicPower: 10 },
-          durability: 95,
-          maxDurability: 100,
-          isLendable: true,
-          ownerId: '0x1234',
-          originalOwnerId: '0x1234',
-          chainId: 1,
-          contractAddress: '0xabc123',
-          createdAt: new Date(),
-          lendingOffer: {
-            id: 'offer1',
-            equipmentId: '1',
-            lenderId: '0x1234',
-            collateralAmount: BigInt(100),
-            rentalFee: BigInt(10),
-            duration: 86400,
-            status: 'available' as any,
-            chainId: 1,
-            contractAddress: '0xdef456',
-            createdAt: new Date(),
-          }
-        },
-        {
-          id: '2',
-          tokenId: 1002,
-          name: 'Mystic Armor of Protection',
-          description: 'Enchanted armor that glows with protective magic',
-          equipmentType: 'armor' as EquipmentType,
-          rarity: 'epic' as Rarity,
-          stats: { attackPower: 0, defensePower: 35, magicPower: 15, healthBonus: 50 },
-          durability: 88,
-          maxDurability: 100,
-          isLendable: true,
-          ownerId: '0x5678',
-          originalOwnerId: '0x5678',
-          chainId: 137,
-          contractAddress: '0xabc123',
-          createdAt: new Date(),
-          lendingOffer: {
-            id: 'offer2',
-            equipmentId: '2',
-            lenderId: '0x5678',
-            collateralAmount: BigInt(75),
-            rentalFee: BigInt(8),
-            duration: 172800,
-            status: 'available' as any,
-            chainId: 137,
-            contractAddress: '0xdef456',
-            createdAt: new Date(),
-          }
-        },
-        {
-          id: '3',
-          tokenId: 1003,
-          name: 'Ring of Eternal Wisdom',
-          description: 'Increases magical power and mana regeneration',
-          equipmentType: 'accessory' as EquipmentType,
-          rarity: 'rare' as Rarity,
-          stats: { attackPower: 0, defensePower: 0, magicPower: 25, manaBonus: 100 },
-          durability: 100,
-          maxDurability: 100,
-          isLendable: true,
-          ownerId: '0x9abc',
-          originalOwnerId: '0x9abc',
-          chainId: 42161,
-          contractAddress: '0xabc123',
-          createdAt: new Date(),
-          lendingOffer: {
-            id: 'offer3',
-            equipmentId: '3',
-            lenderId: '0x9abc',
-            collateralAmount: BigInt(50),
-            rentalFee: BigInt(5),
-            duration: 259200,
-            status: 'available' as any,
-            chainId: 42161,
-            contractAddress: '0xdef456',
-            createdAt: new Date(),
-          }
-        }
-      ];
+    const initialFilters = {
+      search: filters.search,
+      equipmentType: filters.equipmentType !== 'all' ? filters.equipmentType : undefined,
+      rarity: filters.rarity !== 'all' ? filters.rarity : undefined,
+      maxPrice: filters.maxPrice,
+      onlyAvailable: filters.onlyAvailable,
+    };
+    fetchListings(initialFilters);
+  }, []); // Only run on mount
 
-      setEquipmentListings(mockEquipment);
-      
-      // Mock user's listings and borrowed equipment
-      if (address) {
-        setMyListings(mockEquipment.filter(item => item.ownerId.toLowerCase() === address.toLowerCase()));
-        setBorrowedEquipment([]);
+  // Handle filter changes and refetch data
+  const handleFiltersChange = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters);
+    
+    // Convert filters to marketplace service format
+    const marketplaceFilters = {
+      search: newFilters.search,
+      equipmentType: newFilters.equipmentType !== 'all' ? newFilters.equipmentType : undefined,
+      rarity: newFilters.rarity !== 'all' ? newFilters.rarity : undefined,
+      maxPrice: newFilters.maxPrice,
+      onlyAvailable: newFilters.onlyAvailable,
+    };
+    
+    fetchListings(marketplaceFilters);
+  }, [fetchListings]);
+
+  // Filter listings based on search and availability (client-side filtering)
+  const filteredEquipment = listings.filter(item => {
+    const matchesSearch = !filters.search || 
+      item.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(filters.search.toLowerCase()));
+    
+    const matchesAvailability = !filters.onlyAvailable || 
+      item.lendingOffer.status === 'active';
+    
+    return matchesSearch && matchesAvailability;
+  });
+
+  // Handle borrow action with error handling
+  const onBorrow = async (equipmentId: string) => {
+    try {
+      clearError();
+      const listing = listings.find(item => item.id === equipmentId);
+      if (!listing) {
+        throw new Error('Equipment not found');
       }
       
-      setLoading(false);
-    };
+      await handleBorrowEquipment(listing.lendingOffer.id);
+      
+      success(`Successfully borrowed ${listing.name}!`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to borrow equipment';
+      showError(errorMessage);
+      console.error('Failed to borrow equipment:', error);
+    }
+  };
 
-    fetchMarketplaceData();
-  }, [address]);
+  // Handle cancel listing
+  const onCancelListing = async (listingId: string) => {
+    try {
+      clearError();
+      const listing = myListings.find(item => item.lendingOffer.id === listingId);
+      if (!listing) {
+        throw new Error('Listing not found');
+      }
+      
+      await handleCancelListing(listingId);
+      
+      success(`Successfully canceled listing for ${listing.name}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to cancel listing';
+      showError(errorMessage);
+      console.error('Failed to cancel listing:', error);
+    }
+  };
 
-  const filteredEquipment = equipmentListings.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-                         item.description?.toLowerCase().includes(filters.search.toLowerCase());
-    const matchesType = filters.equipmentType === 'all' || item.equipmentType === filters.equipmentType;
-    const matchesRarity = filters.rarity === 'all' || item.rarity === filters.rarity;
-    const matchesPrice = Number(item.lendingOffer.rentalFee) <= filters.maxPrice;
-    const matchesAvailability = !filters.onlyAvailable || item.lendingOffer.status === 'available';
-    
-    return matchesSearch && matchesType && matchesRarity && matchesPrice && matchesAvailability;
-  });
+  // Handle update listing
+  const onUpdateListing = async (listingId: string, updates: any) => {
+    try {
+      clearError();
+      await handleUpdateListing(listingId, updates);
+      
+      success('Successfully updated listing');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update listing';
+      showError(errorMessage);
+      console.error('Failed to update listing:', error);
+    }
+  };
+
+  // Handle return equipment
+  const onReturn = async (equipmentId: string) => {
+    try {
+      clearError();
+      const borrowedItem = borrowedEquipment.find(item => item.id === equipmentId);
+      if (!borrowedItem) {
+        throw new Error('Borrowed equipment not found');
+      }
+      
+      await handleReturnEquipment(borrowedItem.lendingOffer.id);
+      
+      success(`Successfully returned ${borrowedItem.name}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to return equipment';
+      showError(errorMessage);
+      console.error('Failed to return equipment:', error);
+    }
+  };
 
   const tabs = [
     { key: 'browse', label: '🛒 Browse Equipment', count: filteredEquipment.length },
@@ -160,10 +166,35 @@ const MarketplacePage: React.FC = () => {
   return (
     <div className="text-white min-h-screen">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4 text-glow">🏪 Equipment Marketplace</h1>
-        <p className="text-gray-300 text-lg">
-          Lend and borrow powerful equipment across chains. Earn fees or access gear you need for your adventures.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold mb-4 text-glow">🏪 Equipment Marketplace</h1>
+            <p className="text-gray-300 text-lg">
+              Lend and borrow powerful equipment across chains. Earn fees or access gear you need for your adventures.
+            </p>
+          </div>
+          <button
+            onClick={refetch}
+            disabled={loading}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <span>🔄</span>
+            <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        </div>
+        {error && (
+          <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <span className="text-red-300">⚠️ {error}</span>
+              <button
+                onClick={clearError}
+                className="text-red-400 hover:text-red-300 ml-4"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tab Navigation */}
@@ -195,7 +226,7 @@ const MarketplacePage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Search and Filters */}
           <div className="lg:col-span-1">
-            <SearchFilters filters={filters} onFiltersChange={setFilters} />
+            <SearchFilters filters={filters} onFiltersChange={handleFiltersChange} />
           </div>
           
           {/* Equipment Listings */}
@@ -203,10 +234,7 @@ const MarketplacePage: React.FC = () => {
             <EquipmentListing 
               equipment={filteredEquipment} 
               loading={loading}
-              onBorrow={(equipmentId) => {
-                console.log('Borrowing equipment:', equipmentId);
-                // Implement borrow logic
-              }}
+              onBorrow={onBorrow}
             />
           </div>
         </div>
@@ -216,14 +244,8 @@ const MarketplacePage: React.FC = () => {
         <MyListings 
           listings={myListings}
           loading={loading}
-          onCancelListing={(listingId) => {
-            console.log('Canceling listing:', listingId);
-            // Implement cancel listing logic
-          }}
-          onUpdateListing={(listingId, updates) => {
-            console.log('Updating listing:', listingId, updates);
-            // Implement update listing logic
-          }}
+          onCancelListing={onCancelListing}
+          onUpdateListing={onUpdateListing}
         />
       )}
 
@@ -231,10 +253,7 @@ const MarketplacePage: React.FC = () => {
         <BorrowedEquipment 
           borrowedItems={borrowedEquipment}
           loading={loading}
-          onReturn={(equipmentId) => {
-            console.log('Returning equipment:', equipmentId);
-            // Implement return logic
-          }}
+          onReturn={onReturn}
         />
       )}
     </div>

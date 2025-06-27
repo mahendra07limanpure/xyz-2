@@ -62,6 +62,54 @@ export class LootController {
     }
   }
 
+  async generateLootDev(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { 
+        playerId, 
+        playerAddress, 
+        dungeonLevel = 1, 
+        chainId = 11155111 
+      } = req.body;
+
+      if (!playerId || !playerAddress) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required fields: playerId, playerAddress' 
+        });
+        return;
+      }
+
+      // Generate random equipment
+      const equipment = this.generateRandomEquipment(dungeonLevel);
+      
+      // Create fake tokenId for development
+      const fakeTokenId = Math.floor(Math.random() * 10000) + 1000;
+
+      // Save to database without blockchain interaction
+      const { attributes, ...equipmentData } = equipment; // Remove attributes field
+      const createdEquipment = await this.getDb().equipment.create({
+        data: {
+          ...equipmentData,
+          tokenId: fakeTokenId.toString(),
+          ownerId: playerId,
+          isLendable: true, // Make equipment lendable by default
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        data: {
+          ...createdEquipment,
+          transactionHash: '0xfake_dev_transaction_hash',
+          chainId
+        }
+      });
+    } catch (error) {
+      logger.error('Generate loot dev error:', error);
+      next(error);
+    }
+  }
+
   async getPlayerLoot(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { playerId } = req.params;
@@ -369,6 +417,113 @@ export class LootController {
 
     } catch (error) {
       logger.error('Update lending order error:', error);
+      next(error);
+    }
+  }
+
+  async cancelLendingOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { orderId } = req.params;
+
+      if (!orderId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing orderId' 
+        });
+        return;
+      }
+
+      // Check if order exists and get details
+      const order = await this.getDb().lendingOrder.findUnique({
+        where: { id: orderId },
+        include: {
+          equipment: {
+            include: {
+              owner: {
+                select: { id: true, username: true, wallet: true }
+              }
+            }
+          }
+        }
+      });
+
+      if (!order) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Lending order not found' 
+        });
+        return;
+      }
+
+      // Check if order can be cancelled (only active orders)
+      if (order.status !== 'active') {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Only active orders can be cancelled' 
+        });
+        return;
+      }
+
+      // Update order status to cancelled
+      const cancelledOrder = await this.getDb().lendingOrder.update({
+        where: { id: orderId },
+        data: { status: 'cancelled' },
+        include: {
+          equipment: {
+            include: {
+              owner: {
+                select: { id: true, username: true, wallet: true }
+              }
+            }
+          }
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        data: cancelledOrder 
+      });
+
+    } catch (error) {
+      logger.error('Cancel lending order error:', error);
+      next(error);
+    }
+  }
+
+  async syncEquipment(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { playerId, playerAddress, chainId = 11155111 } = req.body;
+
+      if (!playerId || !playerAddress) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required fields: playerId, playerAddress' 
+        });
+        return;
+      }
+
+      // For now, just return the player's equipment from database
+      // In a real implementation, this would sync with blockchain
+      const equipment = await this.getDb().equipment.findMany({
+        where: { ownerId: playerId },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // TODO: Implement actual blockchain sync logic here
+      // This would involve:
+      // 1. Query the blockchain for player's NFTs
+      // 2. Compare with database records
+      // 3. Update/insert missing equipment
+      // 4. Mark transferred equipment as no longer owned
+
+      res.json({ 
+        success: true, 
+        data: equipment,
+        message: `Synced ${equipment.length} equipment items for player ${playerId}`
+      });
+
+    } catch (error) {
+      logger.error('Sync equipment error:', error);
       next(error);
     }
   }

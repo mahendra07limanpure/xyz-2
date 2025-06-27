@@ -1,5 +1,17 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Equipment, LendingOffer } from '../../../../shared/src/types';
+import { 
+  formatPrice, 
+  formatDuration, 
+  getRarityColor, 
+  getRarityEmoji, 
+  getTypeEmoji, 
+  getChainName,
+  getChainEmoji,
+  sortEquipmentByPrice,
+  sortEquipmentByRarity,
+  sortEquipmentByDate
+} from '../../utils/marketplaceUtils';
 
 interface EquipmentListingProps {
   equipment: (Equipment & { lendingOffer: LendingOffer })[];
@@ -7,7 +19,29 @@ interface EquipmentListingProps {
   onBorrow: (equipmentId: string) => void;
 }
 
+type SortOption = 'price-asc' | 'price-desc' | 'rarity-desc' | 'rarity-asc' | 'date-desc' | 'date-asc';
+
 const EquipmentListing: React.FC<EquipmentListingProps> = ({ equipment, loading, onBorrow }) => {
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+
+  const sortedEquipment = useMemo(() => {
+    switch (sortBy) {
+      case 'price-asc':
+        return sortEquipmentByPrice(equipment, true);
+      case 'price-desc':
+        return sortEquipmentByPrice(equipment, false);
+      case 'rarity-asc':
+        return sortEquipmentByRarity(equipment, true);
+      case 'rarity-desc':
+        return sortEquipmentByRarity(equipment, false);
+      case 'date-asc':
+        return sortEquipmentByDate(equipment, true);
+      case 'date-desc':
+        return sortEquipmentByDate(equipment, false);
+      default:
+        return equipment;
+    }
+  }, [equipment, sortBy]);
   const getRarityColor = (rarity: string) => {
     const colors = {
       common: 'text-gray-400 border-gray-400',
@@ -17,9 +51,8 @@ const EquipmentListing: React.FC<EquipmentListingProps> = ({ equipment, loading,
       legendary: 'text-orange-400 border-orange-400',
       mythic: 'text-red-400 border-red-400',
     };
-    return colors[rarity as keyof typeof colors] || colors.common;
-  };
-
+    return colors[rarity] || colors.common;
+  }
   const getRarityEmoji = (rarity: string) => {
     const emojis = {
       common: '⚪',
@@ -29,9 +62,8 @@ const EquipmentListing: React.FC<EquipmentListingProps> = ({ equipment, loading,
       legendary: '🟠',
       mythic: '🔴',
     };
-    return emojis[rarity as keyof typeof emojis] || '⚪';
-  };
-
+    return emojis[rarity] || '⚪';
+  }
   const getTypeEmoji = (type: string) => {
     const emojis = {
       weapon: '⚔️',
@@ -39,27 +71,8 @@ const EquipmentListing: React.FC<EquipmentListingProps> = ({ equipment, loading,
       accessory: '💍',
       consumable: '🧪',
     };
-    return emojis[type as keyof typeof emojis] || '📦';
-  };
-
-  const getChainName = (chainId: number) => {
-    const chains = {
-      1: 'Ethereum',
-      137: 'Polygon',
-      42161: 'Arbitrum',
-    };
-    return chains[chainId as keyof typeof chains] || `Chain ${chainId}`;
-  };
-
-  const formatDuration = (seconds: number) => {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    
-    if (days > 0) {
-      return `${days} day${days > 1 ? 's' : ''}`;
-    }
-    return `${hours} hour${hours > 1 ? 's' : ''}`;
-  };
+    return emojis[type] || '📦';
+  }
 
   if (loading) {
     return (
@@ -99,16 +112,22 @@ const EquipmentListing: React.FC<EquipmentListingProps> = ({ equipment, loading,
           {equipment.length} item{equipment.length !== 1 ? 's' : ''} available
         </h3>
         <div className="flex space-x-2">
-          <button className="px-3 py-1 bg-black/30 text-gray-300 rounded text-sm hover:bg-black/50 transition-colors">
-            Sort by Price
-          </button>
-          <button className="px-3 py-1 bg-black/30 text-gray-300 rounded text-sm hover:bg-black/50 transition-colors">
-            Sort by Rarity
-          </button>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="px-3 py-1 bg-black/30 text-gray-300 rounded text-sm hover:bg-black/50 transition-colors border border-gray-600"
+          >
+            <option value="date-desc">Newest First</option>
+            <option value="date-asc">Oldest First</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="rarity-desc">Rarity: High to Low</option>
+            <option value="rarity-asc">Rarity: Low to High</option>
+          </select>
         </div>
       </div>
 
-      {equipment.map((item) => (
+      {sortedEquipment.map((item) => (
         <div key={item.id} className="game-card hover:scale-[1.02] transition-transform">
           <div className="flex space-x-4">
             {/* Equipment Icon/Image */}
