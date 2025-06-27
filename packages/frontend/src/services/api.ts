@@ -137,7 +137,7 @@ class ApiService {
 
   // Player endpoints
   async createPlayer(wallet: string, username?: string): Promise<ApiResponse<Player>> {
-    return this.request('/api/game/player', {
+    return this.request('/api/game/player/connect', {
       method: 'POST',
       body: JSON.stringify({ wallet, username }),
     });
