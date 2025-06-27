@@ -7,9 +7,17 @@ import {
   apiClient,
   PARTY_CREATE_ROUTE,
   PARTY_PLAYER_GET_ROUTE,
+  GAME_PLAYER_REGISTER_ROUTE,
 } from "../utils/routes";
 import { useWalletClient } from "wagmi";
 import { blockchainService } from "../services/blockchainServiceFrontend";
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
 
 interface PartyInvite {
   id: string;
@@ -40,51 +48,52 @@ const PartyPage: React.FC = () => {
   );
 
   // Mock data for demonstration
-  useEffect(() => {
-    const fetchPlayerParty = async () => {
-      if (!address) return;
+  const fetchPlayerParty = async () => {
+    if (!address) return;
 
-      try {
-        console.log("Fetching party for player:", address);
-        const response = await apiClient.get(
-          PARTY_PLAYER_GET_ROUTE.replace("{address}", address)
-        );
-        console.log("Player party response:", response);
-        if (!response.data || !response.data.data) {
-          console.warn("No party data found for player:", address);
-          return;
-        }
-
-        const data = response.data?.data;
-        if (!data) return;
-
-        const updatedParty: Party = {
-          id: data.id,
-          name: data.name,
-          leaderId:
-            data.members.find((m: any) => m.role === "leader")?.player.wallet ||
-            "",
-          members: data.members.map((m: any) => ({
-            playerId: m.playerId,
-            walletAddress: m.player.wallet,
-            chainId: data.chainId,
-            role: m.role,
-            joinedAt: new Date(m.createdAt),
-            isOnline: true,
-          })),
-          maxSize: data.maxSize,
-          createdChainId: data.chainId,
-          status: PartyStatus.FORMING,
-          createdAt: new Date(data.createdAt),
-          updatedAt: new Date(data.updatedAt),
-        };
-
-        setCurrentParty(updatedParty);
-      } catch (err) {
-        console.error("Error fetching player party:", err);
+    try {
+      console.log("Fetching party for player:", address);
+      const response = await apiClient.get(
+        PARTY_PLAYER_GET_ROUTE.replace("{address}", address)
+      );
+      console.log("Player party response:", response);
+      const apiResponse = response.data as ApiResponse<any>;
+      if (!apiResponse.data) {
+        console.warn("No party data found for player:", address);
+        return;
       }
-    };
 
+      const data = apiResponse.data;
+      if (!data) return;
+
+      const updatedParty: Party = {
+        id: data.id,
+        name: data.name,
+        leaderId:
+          data.members.find((m: any) => m.role === "leader")?.player.wallet ||
+          "",
+        members: data.members.map((m: any) => ({
+          playerId: m.playerId,
+          walletAddress: m.player.wallet,
+          chainId: data.chainId,
+          role: m.role,
+          joinedAt: new Date(m.createdAt),
+          isOnline: true,
+        })),
+        maxSize: data.maxSize,
+        createdChainId: data.chainId,
+        status: PartyStatus.FORMING,
+        createdAt: new Date(data.createdAt),
+        updatedAt: new Date(data.updatedAt),
+      };
+
+      setCurrentParty(updatedParty);
+    } catch (err) {
+      console.error("Error fetching player party:", err);
+    }
+  };
+
+  useEffect(() => {
     fetchPlayerParty();
   }, [address]);
 
@@ -97,11 +106,22 @@ const PartyPage: React.FC = () => {
     setIsCreatingParty(true);
   
     try {
+      // Step 0: Ensure player is registered in the database
+      try {
+        await apiClient.post(GAME_PLAYER_REGISTER_ROUTE, {
+          wallet: address,
+        });
+        console.log('Player registration successful or already exists');
+      } catch (err) {
+        console.error('Player registration failed:', err);
+        throw new Error('Failed to register player');
+      }
+
       // Step 1: Register player on-chain (non-blocking, skip if already registered)
       try {
         await blockchainService.registerPlayer(walletClient, chainId);
       } catch (err) {
-        console.warn("Player may already be registered:", err);
+        console.warn("Player may already be registered on-chain:", err);
       }
   
       // Step 2: Create party on-chain
@@ -116,17 +136,20 @@ const PartyPage: React.FC = () => {
         throw new Error("Blockchain transaction failed — no party ID or hash.");
       }
   
-      setCreatePartytTxHash(result.transactionHash);
-  
-      // Step 3: Sync with backend
+      setCreatePartytTxHash(result.transactionHash);      // Step 3: Sync with backend
       const response = await apiClient.post(PARTY_CREATE_ROUTE, {
         name: newPartyName,
         playerAddress: address,
         maxSize,
         chainId,
       });
-  
-      const data = (response as { data: { data: any } }).data?.data;
+
+      const apiResponse = response.data as ApiResponse<any>;
+      if (!apiResponse.success || !apiResponse.data) {
+        throw new Error('Failed to create party in backend');
+      }
+      
+      const data = apiResponse.data;
   
       const newParty: Party = {
         id: data.id,
@@ -150,6 +173,9 @@ const PartyPage: React.FC = () => {
       setCurrentParty(newParty);
       setNewPartyName("");
       setActiveTab("current");
+      
+      // Refetch party data to ensure UI is up to date
+      setTimeout(() => fetchPlayerParty(), 1000); // Small delay to ensure backend is updated
   
     } catch (error) {
       console.error("Error creating party:", error);

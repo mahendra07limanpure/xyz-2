@@ -1,35 +1,19 @@
-import { createPublicClient, type WalletClient, type PublicClient, getContract, http } from 'viem';
+import { type WalletClient } from 'viem';
+import { sepolia, polygonMumbai } from 'viem/chains';
 import { CONTRACT_ADDRESSES } from '../utils/contractAddresses';
-import { CHAINS } from '../utils/chains';
 
 import PartyRegistryJson from '../abi/PartyRegistry.json';
 import LootManagerJson from '../abi/LootManager.json';
 
-const partyRegistryAbi = PartyRegistryJson.abi;
-const lootManagerAbi = LootManagerJson.abi;
+const partyRegistryAbi = PartyRegistryJson as any;
+const lootManagerAbi = LootManagerJson as any;
 
+const CHAINS = {
+  11155111: sepolia,
+  80001: polygonMumbai,
+} as const;
 
 export class BlockchainService {
-  private publicClients: Map<number, PublicClient> = new Map();
-
-  constructor() {
-    for (const chainId of Object.keys(CONTRACT_ADDRESSES).map(Number)) {
-        this.publicClients.set(
-            chainId,
-            createPublicClient({
-              chain: CHAINS[chainId],
-              transport: http(CHAINS[chainId].rpcUrls.default.http[0]),
-            })
-          );
-    }
-  }
-
-  private getPublicClient(chainId: number): PublicClient {
-    const client = this.publicClients.get(chainId);
-    if (!client) throw new Error(`Unsupported chain ${chainId}`);
-    return client;
-  }
-
   private getContractAbi(name: 'LootManager' | 'PartyRegistry') {
     if (name === 'LootManager') return lootManagerAbi;
     if (name === 'PartyRegistry') return partyRegistryAbi;
@@ -42,18 +26,8 @@ export class BlockchainService {
     return addresses[contract];
   }
 
-  // READ: get party info
-  async getParty(chainId: number, partyId: bigint) {
-    const publicClient = this.getPublicClient(chainId);
-    const contract = getContract({
-      address: this.getContractAddress(chainId, 'partyRegistry'),
-      abi: partyRegistryAbi,
-      publicClient,
-    });
-
-    const party = await contract.read.getParty([partyId]);
-    return party;
-  }
+  // Note: For read operations, use useReadContract hook directly in components
+  // This service is mainly for write operations now
 
   // WRITE: create party
   async createParty(
@@ -69,17 +43,24 @@ export class BlockchainService {
       abi: partyRegistryAbi,
       functionName: 'createParty',
       args: [BigInt(maxSize)],
+      chain: CHAINS[chainId as keyof typeof CHAINS],
+      account: address,
     });
 
     return { transactionHash: hash };
   }
 
   async registerPlayer(walletClient: WalletClient, chainId: number): Promise<string> {
+    const address = walletClient.account?.address;
+    if (!address) throw new Error('Wallet not connected');
+
     const hash = await walletClient.writeContract({
       address: this.getContractAddress(chainId, 'partyRegistry'),
       abi: partyRegistryAbi,
       functionName: 'registerPlayer',
-      args: []
+      args: [],
+      chain: CHAINS[chainId as keyof typeof CHAINS],
+      account: address,
     });
 
     return hash;
@@ -95,6 +76,9 @@ export class BlockchainService {
     power: number,
     attributes: string[]
   ): Promise<string> {
+    const address = walletClient.account?.address;
+    if (!address) throw new Error('Wallet not connected');
+
     const hash = await walletClient.writeContract({
       address: this.getContractAddress(chainId, 'lootManager'),
       abi: lootManagerAbi,
@@ -107,6 +91,8 @@ export class BlockchainService {
         BigInt(power),
         attributes,
       ],
+      chain: CHAINS[chainId as keyof typeof CHAINS],
+      account: address,
     });
 
     return hash;
