@@ -8,47 +8,108 @@ import {
   LOOT_PLAYER_GET_ROUTE
 } from '../utils/routes';
 import { useAccount } from "wagmi";
+import { APIResponse } from '../../../shared/src/types';
+
+interface PlayerData {
+  id: string;
+  wallet: string;
+  username?: string;
+  level: number;
+  experience: number;
+  equipment: Equipment[];
+  gameStats?: GameStats;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Equipment {
+  id: string;
+  tokenId: number;
+  name: string;
+  rarity: string;
+  attackPower: number;
+  defensePower: number;
+  magicPower: number;
+}
+
+interface GameStats {
+  dungeonsCleared: number;
+  totalLoot: number;
+  totalExperience: number;
+  highestLevel: number;
+  gamesPlayed: number;
+}
+
+interface PartyMember {
+  player: {
+    id: string;
+    wallet: string;
+    username?: string;
+  };
+  role: string;
+  joinedAt: string;
+}
+
+interface PartyData {
+  id: string;
+  name?: string;
+  chainId: number;
+  isLeader?: boolean;
+  members: PartyMember[];
+}
 
 
 const ProfilePage: React.FC = () => {
-  const [player, setPlayer] = useState<any>(null);
-  const [party, setParty] = useState<any>(null);
-  const [equipment, setEquipment] = useState<any[]>([]);
+  const [player, setPlayer] = useState<PlayerData | null>(null);
+  const [party, setParty] = useState<PartyData | null>(null);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [editingUsername, setEditingUsername] = useState(false);
   const [username, setUsername] = useState('');
-  const { address: WALLET_ADDRESS } = useAccount(); // replace with actual dynamic value
-
+  const { address: WALLET_ADDRESS } = useAccount();
 
   // Fetch all profile data
   useEffect(() => {
     const fetchProfile = async () => {
+      if (!WALLET_ADDRESS) return;
+      
       try {
-        const playerRes = await apiClient.get(GAME_PLAYER_GET_ROUTE.replace('{wallet}', WALLET_ADDRESS));
+        const playerRes = await apiClient.get<APIResponse<PlayerData>>(
+          GAME_PLAYER_GET_ROUTE.replace('{wallet}', WALLET_ADDRESS)
+        );
         console.log('Player data:', playerRes.data);
-        const playerData = playerRes.data;
-        setPlayer(playerData.data);
-        console.log('Playerrrrrrr', playerData);
-        setUsername(playerData.data.username || '');
+        
+        if (playerRes.data.success && playerRes.data.data) {
+          const playerData = playerRes.data.data;
+          setPlayer(playerData);
+          console.log('Playerrrrrrr', playerData);
+          setUsername(playerData.username || '');
+          setEquipment(playerData.equipment || []); // ✅ CORRECT: this is the array
+          console.log('Equipment data:', playerData.equipment);
+        }
 
-        const partyRes = await apiClient.get(PARTY_PLAYER_GET_ROUTE.replace('{address}', WALLET_ADDRESS));
-        setParty(partyRes.data.data);
-        console.log('Party data:', partyRes.data.data);
-
-
-        setEquipment(playerData.data.equipment); // ✅ CORRECT: this is the array
-        console.log('Equipment data:', playerData.data.equipment);
+        const partyRes = await apiClient.get<APIResponse<PartyData>>(
+          PARTY_PLAYER_GET_ROUTE.replace('{address}', WALLET_ADDRESS)
+        );
+        
+        if (partyRes.data.success && partyRes.data.data) {
+          setParty(partyRes.data.data);
+          console.log('Party data:', partyRes.data.data);
+        }
       } catch (err) {
         console.error('Error loading profile:', err);
       }
     };
 
     fetchProfile();
-  }, []);
+  }, [WALLET_ADDRESS]);
 
   const updateUsername = async () => {
     if (!player || !player.id) return;
     try {
-      await apiClient.patch(GAME_PLAYER_UPDATE_ROUTE.replace('{playerId}', player.id), { username });
+      await apiClient.patch<APIResponse<PlayerData>>(
+        GAME_PLAYER_UPDATE_ROUTE.replace('{playerId}', player.id), 
+        { username }
+      );
       setEditingUsername(false);
     } catch (err) {
       console.error('Failed to update username:', err);
