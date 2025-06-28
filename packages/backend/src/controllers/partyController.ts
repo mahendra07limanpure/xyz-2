@@ -367,4 +367,52 @@ export class PartyController {
       next(error);
     }
   }
+
+  async getAllAvailableParties(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { limit = 20, offset = 0, excludePlayerId } = req.query;
+
+      // Get all active parties that are not full and not owned by the current player
+      let whereClause: any = {
+        isActive: true,
+      };
+
+      // If excludePlayerId is provided, exclude parties where the player is already a member
+      if (excludePlayerId) {
+        whereClause.members = {
+          none: {
+            playerId: excludePlayerId as string
+          }
+        };
+      }
+
+      const parties = await this.getDb().party.findMany({
+        where: whereClause,
+        include: {
+          members: {
+            include: {
+              player: {
+                select: { id: true, username: true, wallet: true }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: Number(limit),
+        skip: Number(offset)
+      });
+
+      // Filter out full parties
+      const availableParties = parties.filter(party => party.members.length < party.maxSize);
+
+      res.json({ 
+        success: true, 
+        data: availableParties 
+      });
+
+    } catch (error) {
+      logger.error('Get available parties error:', error);
+      next(error);
+    }
+  }
 }
