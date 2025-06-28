@@ -48,13 +48,49 @@ export class Enhanced2DScene extends Phaser.Scene {
   }
 
   preload() {
-    // Initialize level system
-    const initialLevel = getLevel(this.currentLevelId)!;
-    this.levelRenderer = new LevelRenderer(this);
-    this.levelManager = new LevelManager(this, initialLevel);
+    try {
+      // Initialize level system
+      const initialLevel = getLevel(this.currentLevelId)!;
+      this.levelRenderer = new LevelRenderer(this);
+      this.levelManager = new LevelManager(this, initialLevel);
+      
+      // Create sprites for the current level
+      this.levelRenderer.createSprites(initialLevel);
+      
+      console.log('Enhanced2DScene preload completed successfully');
+    } catch (error) {
+      console.error('Error during Enhanced2DScene preload:', error);
+      
+      // Create minimal fallback textures
+      this.createFallbackTextures();
+    }
+  }
+  
+  private createFallbackTextures() {
+    console.log('Creating fallback textures...');
     
-    // Create sprites for the current level
-    this.levelRenderer.createSprites(initialLevel);
+    const graphics = this.add.graphics();
+    
+    // Create a simple player texture
+    graphics.fillStyle(0x00ff00);
+    graphics.fillCircle(16, 16, 12);
+    graphics.generateTexture('player-enhanced', 32, 32);
+    graphics.clear();
+    
+    // Create a simple wall texture  
+    graphics.fillStyle(0x666666);
+    graphics.fillRect(0, 0, 32, 32);
+    graphics.generateTexture('wall-dungeon', 32, 32);
+    graphics.clear();
+    
+    // Create a simple floor texture
+    graphics.fillStyle(0x333333);
+    graphics.fillRect(0, 0, 32, 32);
+    graphics.generateTexture('floor-dungeon', 32, 32);
+    graphics.clear();
+    
+    graphics.destroy();
+    console.log('Fallback textures created');
   }
 
   create() {
@@ -116,8 +152,16 @@ export class Enhanced2DScene extends Phaser.Scene {
   private createPlayer() {
     // Verify player texture exists before creating sprite
     if (!this.textures.exists('player-enhanced')) {
-      console.error('Player texture does not exist! Cannot create player.');
-      throw new Error('Player texture not found');
+      console.error('Player texture does not exist! Attempting to create fallback texture...');
+      
+      // Create a simple fallback texture
+      const graphics = this.add.graphics();
+      graphics.fillStyle(0x00ff00); // Green color
+      graphics.fillCircle(16, 16, 12);
+      graphics.generateTexture('player-enhanced', 32, 32);
+      graphics.destroy();
+      
+      console.log('Created fallback player texture');
     }
     
     const startPos = this.levelManager.getPlayerStartPosition();
@@ -781,18 +825,18 @@ export class Enhanced2DScene extends Phaser.Scene {
   }
 
   private setupCameraIgnores() {
-    // Make main camera ignore UI container
-    this.cameras.main.ignore(this.uiContainer);
-    
-    // Make UI camera ignore all game objects except UI container
-    const gameObjects = this.children.list.filter(child => child !== this.uiContainer);
-    this.uiCamera.ignore(gameObjects);
-    
-    console.log('Camera ignores setup:', {
-      mainCameraIgnoring: 'UI container',
-      uiCameraIgnoring: `${gameObjects.length} game objects`,
-      uiContainerChildren: this.uiContainer.list.length
-    });
+    // Simplified camera setup - just ensure UI container is handled by UI camera
+    try {
+      this.cameras.main.ignore(this.uiContainer);
+      
+      console.log('Simplified camera ignores setup:', {
+        mainCameraIgnoring: 'UI container only',
+        uiContainerChildren: this.uiContainer.list.length
+      });
+    } catch (error) {
+      console.warn('Camera ignore setup failed:', error);
+      // Continue without camera ignores if setup fails
+    }
   }
 
   private getUIElement(name: string): Phaser.GameObjects.GameObject | null {

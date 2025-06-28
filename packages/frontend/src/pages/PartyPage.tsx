@@ -353,7 +353,8 @@ const PartyPage: React.FC = () => {
       state: { 
         partyMode: true, 
         partyId: currentParty.id,
-        partyMembers: currentParty.members 
+        partyMembers: currentParty.members,
+        autoStartInteractive: true // Auto-start in interactive mode for multiplayer
       } 
     });
   };

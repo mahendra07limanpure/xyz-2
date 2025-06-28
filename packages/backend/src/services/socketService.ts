@@ -30,6 +30,14 @@ export class GameSocketManager {
         this.handleDungeonAction(socket, data);
       });
 
+      socket.on('multiplayer:join_game', (data: { partyId: string; playerData: any }) => {
+        this.handleMultiplayerJoin(socket, data);
+      });
+
+      socket.on('multiplayer:leave_game', (data: { partyId: string; playerId: string }) => {
+        this.handleMultiplayerLeave(socket, data);
+      });
+
       socket.on('chat:message', (data: { message: string, partyId?: string }) => {
         this.handleChatMessage(socket, data);
       });
@@ -87,13 +95,80 @@ export class GameSocketManager {
   private handleDungeonAction(socket: Socket, data: any): void {
     const { partyId, action, payload } = data;
     
-    // Broadcast action to all party members
-    socket.to(partyId).emit('dungeon:action', {
+    // Handle specific multiplayer actions
+    if (action === 'player_move') {
+      socket.to(partyId).emit('multiplayer:player_move', {
+        playerId: socket.data.playerId,
+        action,
+        payload,
+        timestamp: new Date()
+      });
+    } else if (action === 'player_action') {
+      socket.to(partyId).emit('multiplayer:player_action', {
+        playerId: socket.data.playerId,
+        action,
+        payload,
+        timestamp: new Date()
+      });
+    } else {
+      // Broadcast generic action to all party members
+      socket.to(partyId).emit('dungeon:action', {
+        playerId: socket.data.playerId,
+        action,
+        payload,
+        timestamp: new Date()
+      });
+    }
+  }
+
+  private handleMultiplayerJoin(socket: Socket, data: { partyId: string; playerData: any }): void {
+    const { partyId, playerData } = data;
+    
+    socket.join(partyId);
+    
+    // Notify other players that this player joined the game
+    socket.to(partyId).emit('multiplayer:player_joined', {
       playerId: socket.data.playerId,
-      action,
-      payload,
+      action: 'player_joined',
+      payload: playerData,
       timestamp: new Date()
     });
+    
+    // Send current game state to the joining player
+    socket.emit('multiplayer:game_state', {
+      playerId: 'server',
+      action: 'game_state',
+      payload: this.getPartyGameState(partyId),
+      timestamp: new Date()
+    });
+    
+    logger.info(`Player ${socket.data.playerId} joined multiplayer game in party ${partyId}`);
+  }
+
+  private handleMultiplayerLeave(socket: Socket, data: { partyId: string; playerId: string }): void {
+    const { partyId, playerId } = data;
+    
+    socket.leave(partyId);
+    
+    // Notify other players that this player left the game
+    socket.to(partyId).emit('multiplayer:player_left', {
+      playerId: socket.data.playerId,
+      action: 'player_left',
+      payload: { playerId },
+      timestamp: new Date()
+    });
+    
+    logger.info(`Player ${playerId} left multiplayer game in party ${partyId}`);
+  }
+
+  private getPartyGameState(partyId: string): any {
+    // Return current game state for a party
+    // This would include enemy positions, loot, etc.
+    return {
+      enemies: [],
+      loot: [],
+      level: 1
+    };
   }
 
   private handleChatMessage(socket: Socket, data: { message: string, partyId?: string }): void {

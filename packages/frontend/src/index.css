@@ -117,3 +117,60 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Game canvas specific styles to prevent rendering issues */
+.phaser-game-container {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+.phaser-game {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+.phaser-game canvas {
+  position: relative !important;
+  z-index: 1 !important;
+  display: block !important;
+  background: transparent !important;
+  /* Ensure canvas is visible and not hidden */
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure no elements are blocking the canvas */
+.phaser-game-container::before,
+.phaser-game-container::after {
+  content: none !important;
+}
+
+/* Game overlay elements should have higher z-index but still below modals */
+.game-overlay {
+  z-index: 5;
+  pointer-events: none; /* Allow clicks to pass through to game */
+}
+
+.game-overlay button,
+.game-overlay input,
+.game-overlay select {
+  pointer-events: auto; /* Re-enable pointer events for interactive elements */
+}
+
+/* Modal and instruction overlays should be highest */
+.modal-overlay {
+  z-index: 9999;
+}
+
+/* Toast notifications should be below modals but above game */
+.toast-container {
+  z-index: 9997;
+}
+
+/* Debug: add a visual indicator for game container */
+.phaser-game-container.debug {
+  border: 2px solid lime !important;
+  background: rgba(255, 0, 0, 0.1) !important;
+}

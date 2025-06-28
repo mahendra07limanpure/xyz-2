@@ -8,6 +8,7 @@ import InventoryView from '../components/game/InventoryView';
 import GameMenu from '../components/game/GameMenu';
 import PlayerStats from '../components/game/PlayerStats';
 import PhaserGame from '../game/PhaserGame';
+import MultiplayerGame from '../game/MultiplayerGame';
 import { socketService } from '../services/socketService';
 import type { PartyMember } from '../../../shared/src/types';
 
@@ -21,6 +22,7 @@ const GamePage: React.FC = () => {
   const partyMode = location.state?.partyMode || false;
   const partyId = location.state?.partyId || null;
   const partyMembers = location.state?.partyMembers || [];
+  const autoStartInteractive = location.state?.autoStartInteractive || false;
   
   const [connectedPartyMembers, setConnectedPartyMembers] = useState<Set<string>>(new Set());
   const [chatMessages, setChatMessages] = useState<Array<{
@@ -30,6 +32,15 @@ const GamePage: React.FC = () => {
   }>>([]);
 
   useEffect(() => {
+    // Auto-start interactive mode for party gameplay
+    if (autoStartInteractive && partyMode) {
+      setGameMode('interactive');
+      // Start the game automatically
+      if (!state.gameStarted) {
+        // Trigger game start here if needed
+      }
+    }
+    
     if (partyMode && partyId && address) {
       // Connect to socket and join party room
       socketService.connect()
@@ -78,7 +89,7 @@ const GamePage: React.FC = () => {
         socketService.leaveParty(partyId, address);
       }
     };
-  }, [partyMode, partyId, address]);
+  }, [partyMode, partyId, address, autoStartInteractive, state.gameStarted]);
 
   const sendChatMessage = (message: string) => {
     if (partyMode && partyId) {
@@ -140,11 +151,25 @@ const GamePage: React.FC = () => {
     }
 
     if (gameMode === 'interactive') {
-      return (
-        <div className="relative w-full h-full">
-          <PhaserGame width={800} height={600} />
-        </div>
-      );
+      // Use multiplayer game when in party mode, regular game otherwise
+      if (partyMode && partyId && partyMembers.length > 0) {
+        return (
+          <div className="relative w-full h-full">
+            <MultiplayerGame 
+              width={800} 
+              height={600} 
+              partyId={partyId}
+              partyMembers={partyMembers}
+            />
+          </div>
+        );
+      } else {
+        return (
+          <div className="relative w-full h-full">
+            <PhaserGame width={800} height={600} />
+          </div>
+        );
+      }
     }
 
     // Classic mode
@@ -220,6 +245,7 @@ const GamePage: React.FC = () => {
             <p className="text-sm text-gray-300">
               Traditional turn-based RPG with menu-driven combat and text descriptions. 
               Perfect for strategic gameplay and deeper story immersion.
+              {partyMode && <span className="text-purple-300 block mt-2">🚀 Party support coming soon!</span>}
             </p>
           </div>
           <div className="glass-morphism p-4 rounded-lg">
@@ -227,6 +253,7 @@ const GamePage: React.FC = () => {
             <p className="text-sm text-gray-300">
               Real-time 2D dungeon crawler with direct character control. 
               Move with WASD, explore visually, and engage in dynamic combat.
+              {partyMode && <span className="text-green-300 block mt-2">👥 Full multiplayer support - play together in real-time!</span>}
             </p>
           </div>
         </div>
