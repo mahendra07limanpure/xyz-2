@@ -122,7 +122,7 @@ export const LEVELS: LevelConfig[] = [
       { x: 480, y: 384, type: 'legendary_chest' }
     ],
     map: level1Map,
-    backgroundColor: 0x2F4F4F,
+    backgroundColor: 0x0D0D0D, // Very dark background to complement stone textures
     theme: 'dungeon'
   }
 ];

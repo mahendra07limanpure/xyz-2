@@ -149,7 +149,7 @@ const EquipmentListing: React.FC<EquipmentListingProps> = ({ equipment, loading,
                 </div>
                 <div className="text-right">
                   <div className="text-xl font-bold text-purple-400">
-                    {formatPrice(item.lendingOffer.rentalFee)} ETH
+                    {formatPrice(item.lendingOffer.rentalFee)}
                   </div>
                   <div className="text-xs text-gray-400">
                     {formatDuration(item.lendingOffer.duration * 3600)}

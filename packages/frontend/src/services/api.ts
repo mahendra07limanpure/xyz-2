@@ -201,10 +201,45 @@ class ApiService {
     return this.request(`/api/party/player/${playerId}`);
   }
 
+  async getAllAvailableParties(excludePlayerId?: string, limit?: number, offset?: number): Promise<ApiResponse<Party[]>> {
+    const params = new URLSearchParams();
+    if (excludePlayerId) params.append('excludePlayerId', excludePlayerId);
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    
+    const queryString = params.toString();
+    return this.request(`/api/party/available${queryString ? `?${queryString}` : ''}`);
+  }
+
   async disbandParty(partyId: string, playerId: string): Promise<ApiResponse<{ message: string }>> {
     return this.request(`/api/party/${partyId}/disband`, {
       method: 'POST',
       body: JSON.stringify({ playerId }),
+    });
+  }
+
+  async requestToJoinParty(data: {
+    partyId: string;
+    playerId: string;
+    message?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.request('/api/party/request', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPartyRequests(partyId: string): Promise<ApiResponse<any[]>> {
+    return this.request(`/api/party/${partyId}/requests`);
+  }
+
+  async respondToPartyRequest(requestId: string, data: {
+    action: 'approve' | 'reject';
+    responderId: string;
+  }): Promise<ApiResponse<any>> {
+    return this.request(`/api/party/requests/${requestId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 

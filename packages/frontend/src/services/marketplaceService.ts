@@ -35,9 +35,18 @@ class MarketplaceService {
   /**
    * Convert ETH value to Wei (BigInt)
    * Handles both integer and decimal string values
+   * Also handles values that are already in Wei format
    */
   private ethToWei(ethValue: string): bigint {
-    return BigInt(Math.floor(parseFloat(ethValue) * 1e18));
+    const numValue = parseFloat(ethValue);
+    
+    // If the value is very large (>= 1e15), it's likely already in Wei
+    if (numValue >= 1e15) {
+      return BigInt(ethValue);
+    }
+    
+    // Otherwise, convert from ETH to Wei
+    return BigInt(Math.floor(numValue * 1e18));
   }
 
   /**

@@ -7,8 +7,15 @@ import { Equipment, EquipmentType, Rarity, LendingStatus } from '../../../shared
 export const formatPrice = (price: bigint | string | number): string => {
   try {
     let priceNum: number;
+    
     if (typeof price === 'string') {
-      priceNum = parseFloat(price);
+      // If it's a string that looks like Wei (very large number), convert from Wei
+      const numPrice = parseFloat(price);
+      if (numPrice >= 1e15) { // If price is >= 0.001 ETH in Wei
+        priceNum = numPrice / 1e18; // Convert from Wei to ETH
+      } else {
+        priceNum = numPrice; // Already in ETH
+      }
     } else if (typeof price === 'bigint') {
       // Convert Wei back to ETH
       priceNum = Number(price) / 1e18;

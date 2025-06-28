@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
+import { useNavigate } from "react-router-dom";
 import { PartyStatus, PartyRole } from "../../../shared/src/types";
 import type { Party, PartyMember } from "../../../shared/src/types";
 import { useGame } from "../contexts/GameContext";
@@ -7,10 +8,12 @@ import {
   apiClient,
   PARTY_CREATE_ROUTE,
   PARTY_PLAYER_GET_ROUTE,
+  PARTY_AVAILABLE_ROUTE,
   GAME_PLAYER_REGISTER_ROUTE,
 } from "../utils/routes";
 import { useWalletClient } from "wagmi";
 import { blockchainService } from "../services/blockchainServiceFrontend";
+import { getChainName } from "../utils/marketplaceUtils";
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -28,12 +31,30 @@ interface PartyInvite {
   maxSize: number;
 }
 
+interface PartyRequest {
+  id: string;
+  partyId: string;
+  playerId: string;
+  message?: string;
+  status: string;
+  createdAt: string;
+  player: {
+    id: string;
+    username?: string;
+    wallet: string;
+    level?: number;
+  };
+}
+
 const PartyPage: React.FC = () => {
   const { address } = useAccount();
   const { state } = useGame();
+  const navigate = useNavigate();
   const [currentParty, setCurrentParty] = useState<Party | null>(null);
   const [partyInvites, setPartyInvites] = useState<PartyInvite[]>([]);
+  const [partyRequests, setPartyRequests] = useState<PartyRequest[]>([]);
   const [availableParties, setAvailableParties] = useState<Party[]>([]);
+  const [isLoadingAvailableParties, setIsLoadingAvailableParties] = useState(false);
   const [isCreatingParty, setIsCreatingParty] = useState(false);
   const [newPartyName, setNewPartyName] = useState("");
   const [maxSize, setMaxSize] = useState(4); // Default max size
@@ -93,9 +114,92 @@ const PartyPage: React.FC = () => {
     }
   };
 
+  const fetchAvailableParties = async () => {
+    if (!address) return;
+
+    setIsLoadingAvailableParties(true);
+    try {
+      console.log("Fetching available parties...");
+      
+      let playerId = '';
+      try {
+        // Get the current player's ID first
+        const playerResponse = await apiClient.get(
+          `/api/game/player/${address}`
+        );
+        const playerData = playerResponse.data as ApiResponse<any>;
+        playerId = playerData?.data?.id || '';
+      } catch (err) {
+        console.warn("Could not get player ID, fetching all parties:", err);
+        // Continue without player ID - we'll get all parties
+      }
+
+      const response = await apiClient.get(
+        `${PARTY_AVAILABLE_ROUTE}?excludePlayerId=${playerId}&limit=20`
+      );
+      console.log("Available parties response:", response);
+      
+      const apiResponse = response.data as ApiResponse<any[]>;
+      if (!apiResponse.success || !apiResponse.data) {
+        console.warn("No available parties found");
+        setAvailableParties([]);
+        return;
+      }
+
+      const transformedParties: Party[] = apiResponse.data.map((partyData: any) => ({
+        id: partyData.id,
+        name: partyData.name,
+        leaderId: partyData.members.find((m: any) => m.role === "leader")?.player.wallet || "",
+        members: partyData.members.map((m: any) => ({
+          playerId: m.playerId,
+          walletAddress: m.player.wallet,
+          chainId: partyData.chainId,
+          role: m.role,
+          joinedAt: new Date(m.createdAt),
+          isOnline: true,
+        })),
+        maxSize: partyData.maxSize,
+        createdChainId: partyData.chainId,
+        status: PartyStatus.FORMING,
+        createdAt: new Date(partyData.createdAt),
+        updatedAt: new Date(partyData.updatedAt),
+      }));
+
+      setAvailableParties(transformedParties);
+      console.log("Available parties loaded:", transformedParties.length);
+    } catch (err) {
+      console.error("Error fetching available parties:", err);
+      setAvailableParties([]);
+    } finally {
+      setIsLoadingAvailableParties(false);
+    }
+  };
+
+  const fetchPartyRequests = async () => {
+    if (!currentParty) return;
+
+    try {
+      const response = await apiClient.get(`/api/party/${currentParty.id}/requests`);
+      const apiResponse = response.data as ApiResponse<PartyRequest[]>;
+      
+      if (apiResponse.success && apiResponse.data) {
+        setPartyRequests(apiResponse.data);
+      }
+    } catch (err) {
+      console.error("Error fetching party requests:", err);
+    }
+  };
+
   useEffect(() => {
     fetchPlayerParty();
+    fetchAvailableParties();
   }, [address]);
+
+  useEffect(() => {
+    if (currentParty && currentParty.leaderId === address) {
+      fetchPartyRequests();
+    }
+  }, [currentParty, address]);
 
   const handleCreateParty = async () => {
     if (!newPartyName.trim() || !address || !walletClient) {
@@ -175,7 +279,10 @@ const PartyPage: React.FC = () => {
       setActiveTab("current");
       
       // Refetch party data to ensure UI is up to date
-      setTimeout(() => fetchPlayerParty(), 1000); // Small delay to ensure backend is updated
+      setTimeout(() => {
+        fetchPlayerParty();
+        fetchAvailableParties(); // Also refresh available parties
+      }, 1000); // Small delay to ensure backend is updated
   
     } catch (error) {
       console.error("Error creating party:", error);
@@ -185,9 +292,43 @@ const PartyPage: React.FC = () => {
   };
   
 
-  const handleJoinParty = (partyId: string) => {
-    console.log("Joining party:", partyId);
-    // Implement join party logic
+  const handleJoinParty = async (partyId: string) => {
+    if (!address) {
+      alert("Please connect your wallet first.");
+      return;
+    }
+
+    try {
+      // Get player ID
+      const playerResponse = await apiClient.get(`/api/game/player/${address}`);
+      const playerData = playerResponse.data as ApiResponse<any>;
+      const playerId = playerData?.data?.id;
+
+      if (!playerId) {
+        alert("Player not found. Please register first.");
+        return;
+      }
+
+      // Send join request
+      const response = await apiClient.post('/api/party/request', {
+        partyId,
+        playerId,
+        message: "I'd like to join your party!"
+      });
+
+      const apiResponse = response.data as ApiResponse<any>;
+      
+      if (apiResponse.success) {
+        alert("Request sent successfully! The party leader will review your request.");
+        // Refresh available parties to update UI
+        fetchAvailableParties();
+      } else {
+        alert(apiResponse.message || "Failed to send request");
+      }
+    } catch (error: any) {
+      console.error("Error requesting to join party:", error);
+      alert(error.response?.data?.message || "Failed to send request");
+    }
   };
 
   const handleAcceptInvite = (inviteId: string) => {
@@ -201,13 +342,26 @@ const PartyPage: React.FC = () => {
     }
   };
 
-  const getChainName = (chainId: number) => {
-    const chains = {
-      1: "Ethereum",
-      137: "Polygon",
-      42161: "Arbitrum",
-    };
-    return chains[chainId as keyof typeof chains] || `Chain ${chainId}`;
+  const handleEnterDungeon = () => {
+    if (!currentParty) {
+      alert("You need to be in a party to enter the dungeon!");
+      return;
+    }
+    
+    // Navigate to the game page for multiplayer gameplay
+    navigate("/game", { 
+      state: { 
+        partyMode: true, 
+        partyId: currentParty.id,
+        partyMembers: currentParty.members,
+        autoStartInteractive: true // Auto-start in interactive mode for multiplayer
+      } 
+    });
+  };
+
+  const handleVisitMarketplace = () => {
+    // Navigate to the marketplace page
+    navigate("/marketplace");
   };
 
   const formatAddress = (address: string) => {
@@ -284,7 +438,10 @@ const PartyPage: React.FC = () => {
 
             <div className="flex gap-4 justify-center">
               <button
-                onClick={() => setActiveTab("browse")}
+                onClick={() => {
+                  setActiveTab("browse");
+                  fetchAvailableParties();
+                }}
                 className="text-purple-400 hover:text-purple-300 underline"
               >
                 Browse Available Parties
@@ -402,15 +559,66 @@ const PartyPage: React.FC = () => {
           {currentParty.status === PartyStatus.FORMING && (
             <div className="mt-6 pt-6 border-t border-gray-700">
               <div className="flex flex-col sm:flex-row gap-4">
-                <button className="game-button flex-1 py-3">
+                <button 
+                  onClick={handleEnterDungeon}
+                  className="game-button flex-1 py-3"
+                >
                   🏰 Enter Dungeon
                 </button>
-                <button className="game-button flex-1 py-3">
+                <button 
+                  onClick={handleVisitMarketplace}
+                  className="game-button flex-1 py-3"
+                >
                   🛒 Visit Marketplace
                 </button>
                 <button className="game-button flex-1 py-3">
                   ⚙️ Party Settings
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Party Requests (for leaders) */}
+          {currentParty.leaderId === address && partyRequests.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-700">
+              <h3 className="text-lg font-semibold text-white mb-3">
+                Join Requests ({partyRequests.length})
+              </h3>
+              <div className="space-y-3">
+                {partyRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="flex items-center justify-between p-4 bg-gray-800 rounded-lg"
+                  >
+                    <div>
+                      <h4 className="text-white font-medium">
+                        {request.player.username || formatAddress(request.player.wallet)}
+                      </h4>
+                      <div className="text-sm text-gray-400">
+                        Level: {request.player.level || 1} • Requested: {new Date(request.createdAt).toLocaleDateString()}
+                      </div>
+                      {request.message && (
+                        <div className="text-sm text-gray-300 mt-1 italic">
+                          "{request.message}"
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleRespondToRequest(request.id, 'approve')}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleRespondToRequest(request.id, 'reject')}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -424,7 +632,12 @@ const PartyPage: React.FC = () => {
       <div className="game-card">
         <h3 className="text-xl font-bold text-white mb-4">Available Parties</h3>
 
-        {availableParties.length === 0 ? (
+        {isLoadingAvailableParties ? (
+          <div className="text-center py-8">
+            <div className="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-purple-400 rounded-full" role="status" aria-label="loading"></div>
+            <p className="text-gray-400 mt-2">Loading available parties...</p>
+          </div>
+        ) : availableParties.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-400">
               No parties available to join at the moment.
@@ -503,6 +716,41 @@ const PartyPage: React.FC = () => {
     </div>
   );
 
+  const handleRespondToRequest = async (requestId: string, action: 'approve' | 'reject') => {
+    if (!address || !currentParty) return;
+
+    try {
+      // Get player ID
+      const playerResponse = await apiClient.get(`/api/game/player/${address}`);
+      const playerData = playerResponse.data as ApiResponse<any>;
+      const playerId = playerData?.data?.id;
+
+      if (!playerId) {
+        alert("Player not found. Please register first.");
+        return;
+      }
+
+      const response = await apiClient.post(`/api/party/requests/${requestId}/respond`, {
+        action,
+        responderId: playerId
+      });
+
+      const apiResponse = response.data as ApiResponse<any>;
+      
+      if (apiResponse.success) {
+        // Refresh party data and requests
+        fetchPlayerParty();
+        fetchPartyRequests();
+        alert(apiResponse.message);
+      } else {
+        alert(apiResponse.message || "Failed to respond to request");
+      }
+    } catch (error: any) {
+      console.error("Error responding to request:", error);
+      alert(error.response?.data?.message || "Failed to respond to request");
+    }
+  };
+
   return (
     <div className="text-white max-w-6xl mx-auto">
       <div className="mb-8">
@@ -528,7 +776,10 @@ const PartyPage: React.FC = () => {
           Current Party
         </button>
         <button
-          onClick={() => setActiveTab("browse")}
+          onClick={() => {
+            setActiveTab("browse");
+            fetchAvailableParties(); // Refresh available parties when browse tab is clicked
+          }}
           className={`px-4 py-2 rounded-lg transition-colors ${
             activeTab === "browse"
               ? "bg-purple-600 text-white"
