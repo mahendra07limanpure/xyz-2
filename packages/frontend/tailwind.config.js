@@ -31,6 +31,7 @@ export default {
           800: '#075985',
           900: '#0c4a6e',
         },
+        'glow-purple': '#a855f7',
       },
       fontFamily: {
         'game': ['Orbitron', 'monospace'],
