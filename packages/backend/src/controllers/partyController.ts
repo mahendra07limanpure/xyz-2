@@ -415,4 +415,251 @@ export class PartyController {
       next(error);
     }
   }
+
+  async requestToJoinParty(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { partyId, playerId, message } = req.body;
+
+      if (!partyId || !playerId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required fields: partyId, playerId' 
+        });
+        return;
+      }
+
+      // Check if party exists and is active
+      const party = await this.getDb().party.findUnique({
+        where: { id: partyId },
+        include: { members: true }
+      });
+
+      if (!party || !party.isActive) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Party not found or inactive' 
+        });
+        return;
+      }
+
+      // Check if party is full
+      if (party.members.length >= party.maxSize) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Party is full' 
+        });
+        return;
+      }
+
+      // Check if player is already in this party
+      const existingMember = party.members.find((m: any) => m.playerId === playerId);
+      if (existingMember) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'You are already in this party' 
+        });
+        return;
+      }
+
+      // Check if request already exists
+      const existingRequest = await this.getDb().partyRequest.findUnique({
+        where: { 
+          partyId_playerId: { partyId, playerId }
+        }
+      });
+
+      if (existingRequest) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Request already sent' 
+        });
+        return;
+      }
+
+      // Create the party request
+      const request = await this.getDb().partyRequest.create({
+        data: {
+          partyId,
+          playerId,
+          message: message || null,
+          status: 'pending'
+        },
+        include: {
+          player: {
+            select: { id: true, username: true, wallet: true }
+          },
+          party: {
+            include: {
+              members: {
+                where: { isLeader: true },
+                include: {
+                  player: {
+                    select: { id: true, wallet: true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // TODO: Emit notification to party leader via socket
+      // This would require access to the socket manager
+
+      res.json({ 
+        success: true, 
+        data: request,
+        message: 'Request sent successfully' 
+      });
+
+    } catch (error) {
+      logger.error('Request to join party error:', error);
+      next(error);
+    }
+  }
+
+  async getPartyRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { partyId } = req.params;
+
+      if (!partyId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Party ID is required' 
+        });
+        return;
+      }
+
+      // Get all pending requests for this party
+      const requests = await this.getDb().partyRequest.findMany({
+        where: {
+          partyId,
+          status: 'pending'
+        },
+        include: {
+          player: {
+            select: { id: true, username: true, wallet: true, level: true }
+          }
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      res.json({ 
+        success: true, 
+        data: requests 
+      });
+
+    } catch (error) {
+      logger.error('Get party requests error:', error);
+      next(error);
+    }
+  }
+
+  async respondToPartyRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { requestId } = req.params;
+      const { action, responderId } = req.body; // action: 'approve' | 'reject'
+
+      if (!requestId || !action || !responderId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required fields: requestId, action, responderId' 
+        });
+        return;
+      }
+
+      // Get the request
+      const request = await this.getDb().partyRequest.findUnique({
+        where: { id: requestId },
+        include: {
+          party: {
+            include: {
+              members: {
+                where: { isLeader: true }
+              }
+            }
+          },
+          player: true
+        }
+      });
+
+      if (!request) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Request not found' 
+        });
+        return;
+      }
+
+      // Check if responder is the party leader
+      const isLeader = request.party.members.some((member: any) => 
+        member.playerId === responderId && member.isLeader
+      );
+
+      if (!isLeader) {
+        res.status(403).json({ 
+          success: false, 
+          message: 'Only party leaders can respond to requests' 
+        });
+        return;
+      }
+
+      if (action === 'approve') {
+        // Check if party still has space
+        const currentParty = await this.getDb().party.findUnique({
+          where: { id: request.partyId },
+          include: { members: true }
+        });
+
+        if (!currentParty || currentParty.members.length >= currentParty.maxSize) {
+          res.status(400).json({ 
+            success: false, 
+            message: 'Party is now full' 
+          });
+          return;
+        }
+
+        // Add player to party and update request status
+        await this.getDb().$transaction([
+          this.getDb().partyMember.create({
+            data: {
+              partyId: request.partyId,
+              playerId: request.playerId,
+              role: 'member',
+              isLeader: false
+            }
+          }),
+          this.getDb().partyRequest.update({
+            where: { id: requestId },
+            data: { status: 'approved' }
+          })
+        ]);
+
+        res.json({ 
+          success: true, 
+          message: 'Request approved and player added to party' 
+        });
+      } else if (action === 'reject') {
+        // Update request status to rejected
+        await this.getDb().partyRequest.update({
+          where: { id: requestId },
+          data: { status: 'rejected' }
+        });
+
+        res.json({ 
+          success: true, 
+          message: 'Request rejected' 
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Invalid action. Use "approve" or "reject"' 
+        });
+      }
+
+    } catch (error) {
+      logger.error('Respond to party request error:', error);
+      next(error);
+    }
+  }
 }

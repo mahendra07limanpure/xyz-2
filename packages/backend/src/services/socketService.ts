@@ -107,11 +107,11 @@ export class GameSocketManager {
     };
 
     if (partyId) {
-      // Send to party chat
-      socket.to(partyId).emit('chat:message', chatData);
+      // Send to all party members including sender
+      this.io.to(partyId).emit('chat:message', chatData);
     } else {
-      // Send to global chat
-      socket.broadcast.emit('chat:message', chatData);
+      // Send to global chat including sender
+      this.io.emit('chat:message', chatData);
     }
   }
 
@@ -146,6 +146,12 @@ export class GameSocketManager {
   }
 
   emitToParty(partyId: string, event: string, data: any): void {
+    this.io.to(partyId).emit(event, data);
+  }
+
+  emitToPartyLeader(partyId: string, event: string, data: any): void {
+    // Find and emit to the party leader specifically
+    // This would require storing which players are leaders
     this.io.to(partyId).emit(event, data);
   }
 

@@ -22,6 +22,7 @@ model Player {
 
   // Relationships
   parties      PartyMember[]
+  partyRequests PartyRequest[]
   equipment    Equipment[]
   gameStats    GameStats?
   aiInteractions AIInteraction[]
@@ -31,7 +32,7 @@ model Player {
 
 model Party {
   id          String   @id @default(cuid())
-  contractPartyId String
+  contractPartyId String?
   name        String?
   maxSize     Int      @default(4)
   chainId     Int
@@ -42,6 +43,7 @@ model Party {
 
   // Relationships
   members     PartyMember[]
+  requests    PartyRequest[]
   dungeonRuns DungeonRun[]
 
   @@map("parties")
@@ -61,6 +63,23 @@ model PartyMember {
 
   @@unique([playerId, partyId])
   @@map("party_members")
+}
+
+model PartyRequest {
+  id        String   @id @default(cuid())
+  partyId   String
+  playerId  String
+  message   String?  // Optional message from the requester
+  status    String   @default("pending") // pending, approved, rejected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  party     Party  @relation(fields: [partyId], references: [id])
+  player    Player @relation(fields: [playerId], references: [id])
+
+  @@unique([partyId, playerId])
+  @@map("party_requests")
 }
 
 model Equipment {

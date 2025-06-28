@@ -7,6 +7,8 @@ export interface SocketEvents {
   'party:member_joined': (data: { playerId: string }) => void;
   'party:member_left': (data: { playerId: string }) => void;
   'party:member_disconnected': (data: { playerId: string }) => void;
+  'party:request_received': (data: { requestId: string; playerName: string; message?: string }) => void;
+  'party:request_response': (data: { approved: boolean; partyName: string }) => void;
   'dungeon:action': (data: { playerId: string; action: string; payload: any; timestamp: Date }) => void;
   'chat:message': (data: { playerId: string; message: string; timestamp: Date }) => void;
 }

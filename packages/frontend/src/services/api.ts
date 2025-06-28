@@ -218,6 +218,31 @@ class ApiService {
     });
   }
 
+  async requestToJoinParty(data: {
+    partyId: string;
+    playerId: string;
+    message?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.request('/api/party/request', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPartyRequests(partyId: string): Promise<ApiResponse<any[]>> {
+    return this.request(`/api/party/${partyId}/requests`);
+  }
+
+  async respondToPartyRequest(requestId: string, data: {
+    action: 'approve' | 'reject';
+    responderId: string;
+  }): Promise<ApiResponse<any>> {
+    return this.request(`/api/party/requests/${requestId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Loot endpoints
   async generateLoot(data: {
     playerId: string;
