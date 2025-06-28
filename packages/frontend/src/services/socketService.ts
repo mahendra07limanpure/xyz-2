@@ -16,6 +16,8 @@ export interface SocketEvents {
   'multiplayer:player_joined': (data: { playerId: string; action: string; payload: any; timestamp: Date }) => void;
   'multiplayer:player_left': (data: { playerId: string; action: string; payload: any; timestamp: Date }) => void;
   'multiplayer:game_state': (data: { playerId: string; action: string; payload: any; timestamp: Date }) => void;
+  'multiplayer:enemy_update': (data: { playerId: string; action: string; payload: any; timestamp: Date }) => void;
+  'multiplayer:loot_update': (data: { playerId: string; action: string; payload: any; timestamp: Date }) => void;
 }
 
 class SocketService {
@@ -80,6 +82,15 @@ class SocketService {
   // Chat
   sendChatMessage(message: string, partyId?: string): void {
     this.emit('chat:message', { message, partyId });
+  }
+
+  // Multiplayer game events
+  joinMultiplayerGame(partyId: string, playerData: any): void {
+    this.emit('multiplayer:join_game', { partyId, playerData });
+  }
+
+  leaveMultiplayerGame(partyId: string, playerId: string): void {
+    this.emit('multiplayer:leave_game', { partyId, playerId });
   }
 
   // Event handling

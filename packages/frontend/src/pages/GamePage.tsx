@@ -89,7 +89,7 @@ const GamePage: React.FC = () => {
         socketService.leaveParty(partyId, address);
       }
     };
-  }, [partyMode, partyId, address, autoStartInteractive, state.gameStarted]);
+  }, [partyMode, partyId, address]);
 
   const sendChatMessage = (message: string) => {
     if (partyMode && partyId) {
@@ -151,25 +151,11 @@ const GamePage: React.FC = () => {
     }
 
     if (gameMode === 'interactive') {
-      // Use multiplayer game when in party mode, regular game otherwise
-      if (partyMode && partyId && partyMembers.length > 0) {
-        return (
-          <div className="relative w-full h-full">
-            <MultiplayerGame 
-              width={800} 
-              height={600} 
-              partyId={partyId}
-              partyMembers={partyMembers}
-            />
-          </div>
-        );
-      } else {
-        return (
-          <div className="relative w-full h-full">
-            <PhaserGame width={800} height={600} />
-          </div>
-        );
-      }
+      return (
+        <div className="relative w-full h-full">
+          <PhaserGame width={800} height={600} />
+        </div>
+      );
     }
 
     // Classic mode

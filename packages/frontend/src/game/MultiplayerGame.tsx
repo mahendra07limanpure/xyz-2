@@ -120,20 +120,29 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
     // Create Phaser game
     phaserGameRef.current = new Phaser.Game(config);
 
-    // Join multiplayer game
-    socketService.sendDungeonAction(partyId, 'multiplayer:join_game', {
-      partyId,
-      playerData
-    });
+    // Ensure player is joined first, then join multiplayer game
+    socketService.joinGame(address, address);
+    
+    // Listen for successful player join, then join multiplayer game
+    const handlePlayerJoined = () => {
+      socketService.off('player:joined', handlePlayerJoined);
+      socketService.joinMultiplayerGame(partyId, playerData);
+    };
+    
+    socketService.on('player:joined', handlePlayerJoined);
+    
+    // Fallback timeout in case the event doesn't fire
+    const fallbackTimeout = setTimeout(() => {
+      socketService.off('player:joined', handlePlayerJoined);
+      socketService.joinMultiplayerGame(partyId, playerData);
+    }, 1000);
 
     // Cleanup function
     return () => {
+      clearTimeout(fallbackTimeout);
       if (phaserGameRef.current) {
         // Leave multiplayer game
-        socketService.sendDungeonAction(partyId, 'multiplayer:leave_game', {
-          partyId,
-          playerId: address
-        });
+        socketService.leaveMultiplayerGame(partyId, address);
         
         phaserGameRef.current.destroy(true);
         phaserGameRef.current = null;

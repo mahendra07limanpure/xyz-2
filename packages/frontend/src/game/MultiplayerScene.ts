@@ -42,6 +42,11 @@ export class MultiplayerScene extends Phaser.Scene {
   private levelManager!: LevelManager;
   private currentLevelId: number = 1;
   
+  // Multiplayer game state
+  private serverGameState: any = null;
+  private enemySprites: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
+  private lootSprites: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
+  
   // No custom UI - keep it simple
   
   // Network state
@@ -103,6 +108,13 @@ export class MultiplayerScene extends Phaser.Scene {
     
     // Setup physics collisions
     this.setupCollisions();
+    
+    // Request initial game state if not already received
+    setTimeout(() => {
+      if (!this.serverGameState) {
+        socketService.sendDungeonAction(this.partyId, 'request_game_state', {});
+      }
+    }, 1000);
   }
 
   private setupNetworkListeners(): void {
@@ -124,6 +136,14 @@ export class MultiplayerScene extends Phaser.Scene {
     
     socketService.on('multiplayer:game_state', (data) => {
       this.handleGameStateUpdate(data);
+    });
+    
+    socketService.on('multiplayer:enemy_update', (data) => {
+      this.handleEnemyUpdate(data);
+    });
+    
+    socketService.on('multiplayer:loot_update', (data) => {
+      this.handleLootUpdate(data);
     });
   }
 
@@ -200,17 +220,27 @@ export class MultiplayerScene extends Phaser.Scene {
   private createEnemies(): void {
     this.enemies = this.physics.add.group();
     
-    // Use the level renderer to spawn enemies
-    const currentLevel = this.levelManager.getCurrentLevel();
-    this.levelRenderer.spawnEnemies(currentLevel, this.enemies);
+    // If we have server game state, use it; otherwise generate locally
+    if (this.serverGameState && this.serverGameState.enemies) {
+      this.spawnEnemiesFromServer(this.serverGameState.enemies);
+    } else {
+      // Fallback to local generation for single player or when server state not available
+      const currentLevel = this.levelManager.getCurrentLevel();
+      this.levelRenderer.spawnEnemies(currentLevel, this.enemies);
+    }
   }
 
   private createLoot(): void {
     this.loot = this.physics.add.group();
     
-    // Use the level renderer to spawn loot
-    const currentLevel = this.levelManager.getCurrentLevel();
-    this.levelRenderer.spawnLoot(currentLevel, this.loot);
+    // If we have server game state, use it; otherwise generate locally
+    if (this.serverGameState && this.serverGameState.loot) {
+      this.spawnLootFromServer(this.serverGameState.loot);
+    } else {
+      // Fallback to local generation for single player or when server state not available
+      const currentLevel = this.levelManager.getCurrentLevel();
+      this.levelRenderer.spawnLoot(currentLevel, this.loot);
+    }
   }
 
   private createUI(): void {
@@ -414,262 +444,221 @@ export class MultiplayerScene extends Phaser.Scene {
   }
 
   private handleGameStateUpdate(data: any): void {
-    // Handle shared game state updates (enemies, loot, etc.)
-    console.log('Game state update:', data);
-  }
-
-  // Game mechanics
-  private handleCombat(player: any, enemy: any): void {
-    // Check if we're on cooldown
-    const now = Date.now();
-    const lastAttack = enemy.getData('lastAttackTime') || 0;
-    const cooldown = 1000; // 1 second cooldown
-    
-    if (now - lastAttack < cooldown) {
-      return; // Still on cooldown
+    console.log('🔄 Processing game state update:', data);
+    const gameState = data.payload;
+    if (!gameState) {
+      console.log('❌ No game state payload found');
+      return;
     }
     
-    enemy.setData('lastAttackTime', now);
-    
-    // Deal damage to enemy
-    const damage = 25;
-    const currentHealth = enemy.getData('health') || 50;
-    const newHealth = Math.max(0, currentHealth - damage);
-    enemy.setData('health', newHealth);
-    
-    // Visual feedback for damage
-    enemy.setTint(0xff6666); // Red tint for damage
-    this.time.delayedCall(200, () => {
-      if (enemy.active) {
-        enemy.clearTint();
-      }
+    console.log('📊 Game state details:', {
+      enemies: gameState.enemies?.length || 0,
+      loot: gameState.loot?.length || 0,
+      seed: gameState.seed
     });
     
-    // Create damage text
-    const damageText = this.add.text(enemy.x, enemy.y - 30, `-${damage}`, {
-      fontSize: '16px',
-      color: '#ff0000'
-    });
+    this.serverGameState = gameState;
     
-    this.tweens.add({
-      targets: damageText,
-      y: enemy.y - 60,
-      alpha: 0,
-      duration: 1000,
-      onComplete: () => {
-        damageText.destroy();
-      }
-    });
+    // Clear locally generated enemies and loot, replace with server state
+    this.enemies.clear(true, true); // Remove all existing enemies
+    this.loot.clear(true, true); // Remove all existing loot
     
-    // Check if enemy is dead
-    if (newHealth <= 0) {
-      // Create death effect
-      const deathEffect = this.add.circle(enemy.x, enemy.y, 0, 0xff4444);
-      this.tweens.add({
-        targets: deathEffect,
-        radius: 30,
-        alpha: 0,
-        duration: 500,
-        onComplete: () => {
-          deathEffect.destroy();
-        }
-      });
-      
-      // Remove enemy
-      enemy.destroy();
-      
-      // Show experience gain
-      const expText = this.add.text(enemy.x, enemy.y - 20, '+50 EXP', {
-        fontSize: '14px',
-        color: '#00ff00'
-      });
-      
-      this.tweens.add({
-        targets: expText,
-        y: enemy.y - 50,
-        alpha: 0,
-        duration: 1500,
-        onComplete: () => {
-          expText.destroy();
-        }
-      });
-    }
+    // Clear our tracking maps
+    this.enemySprites.clear();
+    this.lootSprites.clear();
     
-    // Broadcast to party
-    this.queueAction({
-      type: 'attack',
-      playerId: this.playerData.id,
-      data: { 
-        enemyId: enemy.getData('id') || `enemy_${enemy.x}_${enemy.y}`, 
-        damage: damage,
-        newHealth: newHealth,
-        enemyX: enemy.x,
-        enemyY: enemy.y
-      },
-      timestamp: Date.now()
-    });
+    // Spawn from server state
+    this.spawnEnemiesFromServer(gameState.enemies || []);
+    this.spawnLootFromServer(gameState.loot || []);
+    
+    console.log(`✅ Spawned ${this.enemySprites.size} enemies and ${this.lootSprites.size} loot items from server`);
   }
 
-  private handleLootCollection(player: any, lootItem: any): void {
-    // Get loot data
-    const lootValue = lootItem.getData('value') || Math.floor(Math.random() * 100) + 50;
-    const lootId = lootItem.getData('id') || `loot_${lootItem.x}_${lootItem.y}`;
+  private handleEnemyUpdate(data: any): void {
+    const { enemyId, health, alive, damage } = data.payload;
+    const enemySprite = this.enemySprites.get(enemyId);
     
-    // Create collection effect
-    const collectEffect = this.add.circle(lootItem.x, lootItem.y, 0, 0xffd700);
-    this.tweens.add({
-      targets: collectEffect,
-      radius: 40,
-      alpha: 0,
-      duration: 600,
-      onComplete: () => {
-        collectEffect.destroy();
-      }
-    });
-    
-    // Show loot value
-    const lootText = this.add.text(lootItem.x, lootItem.y - 30, `+${lootValue} Gold`, {
-      fontSize: '14px',
-      color: '#ffd700'
-    });
-    
-    this.tweens.add({
-      targets: lootText,
-      y: lootItem.y - 60,
-      alpha: 0,
-      duration: 1500,
-      onComplete: () => {
-        lootText.destroy();
-      }
-    });
-    
-    // Broadcast to party
-    this.queueAction({
-      type: 'loot',
-      playerId: this.playerData.id,
-      data: { 
-        lootId: lootId, 
-        value: lootValue,
-        lootX: lootItem.x,
-        lootY: lootItem.y
-      },
-      timestamp: Date.now()
-    });
-    
-    // Remove loot item
-    lootItem.destroy();
-  }
-
-  private handleRemoteAttack(action: GameAction): void {
-    // Handle attack from another player
-    const { enemyId, damage, newHealth, enemyX, enemyY } = action.data;
-    
-    // Find enemy by position if ID doesn't work
-    let targetEnemy: any = null;
-    
-    this.enemies.children.entries.forEach(enemy => {
-      const sprite = enemy as Phaser.Physics.Arcade.Sprite;
-      const storedId = sprite.getData('id');
-      if (storedId === enemyId || 
-          (Math.abs(sprite.x - enemyX) < 10 && Math.abs(sprite.y - enemyY) < 10)) {
-        targetEnemy = sprite;
-      }
-    });
-    
-    if (targetEnemy) {
-      // Update enemy health
-      targetEnemy.setData('health', newHealth);
-      
-      // Show visual feedback
-      targetEnemy.setTint(0xff6666); // Red tint for damage
-      this.time.delayedCall(200, () => {
-        if (targetEnemy.active) {
-          targetEnemy.clearTint();
-        }
-      });
-      
-      // Create damage text
-      const damageText = this.add.text(targetEnemy.x, targetEnemy.y - 30, `-${damage}`, {
-        fontSize: '14px',
-        color: '#ff8888'
-      });
-      
-      this.tweens.add({
-        targets: damageText,
-        y: targetEnemy.y - 60,
-        alpha: 0,
-        duration: 1000,
-        onComplete: () => {
-          damageText.destroy();
-        }
-      });
-      
-      // Remove enemy if dead
-      if (newHealth <= 0) {
-        const deathEffect = this.add.circle(targetEnemy.x, targetEnemy.y, 0, 0xff4444);
+    if (enemySprite) {
+      // Update enemy health visually
+      if (!alive) {
+        // Enemy died - create death effect
+        const deathEffect = this.add.circle(enemySprite.x, enemySprite.y, 0, 0xff4444, 0.8);
         this.tweens.add({
           targets: deathEffect,
-          radius: 30,
+          radius: 25,
           alpha: 0,
           duration: 500,
-          onComplete: () => {
-            deathEffect.destroy();
-          }
+          onComplete: () => deathEffect.destroy()
         });
         
-        targetEnemy.destroy();
+        // Remove enemy sprite
+        enemySprite.destroy();
+        this.enemySprites.delete(enemyId);
+      } else {
+        // Show damage
+        const damageText = this.add.text(enemySprite.x, enemySprite.y - 20, `-${damage}`, {
+          fontSize: '12px',
+          color: '#ff4444'
+        });
+        
+        this.tweens.add({
+          targets: damageText,
+          y: enemySprite.y - 40,
+          alpha: 0,
+          duration: 800,
+          onComplete: () => damageText.destroy()
+        });
       }
     }
   }
 
-  private handleRemoteLoot(action: GameAction): void {
-    // Handle loot collection from another player
-    const { lootId, value, lootX, lootY } = action.data;
+  private handleLootUpdate(data: any): void {
+    const { lootId, lootType, collectedBy } = data.payload;
+    const lootSprite = this.lootSprites.get(lootId);
     
-    // Find loot item by position if ID doesn't work
-    let targetLoot: any = null;
-    
-    this.loot.children.entries.forEach(lootItem => {
-      const sprite = lootItem as Phaser.Physics.Arcade.Sprite;
-      const storedId = sprite.getData('id');
-      if (storedId === lootId || 
-          (Math.abs(sprite.x - lootX) < 10 && Math.abs(sprite.y - lootY) < 10)) {
-        targetLoot = sprite;
-      }
-    });
-    
-    if (targetLoot) {
-      // Create collection effect for remote player
-      const collectEffect = this.add.circle(targetLoot.x, targetLoot.y, 0, 0xffd700, 0.5);
+    if (lootSprite) {
+      // Create collection effect
+      const collectEffect = this.add.circle(lootSprite.x, lootSprite.y, 0, 0xffd700, 0.5);
       this.tweens.add({
         targets: collectEffect,
         radius: 30,
         alpha: 0,
         duration: 400,
-        onComplete: () => {
-          collectEffect.destroy();
-        }
+        onComplete: () => collectEffect.destroy()
       });
       
       // Show who collected it
-      const collectorText = this.add.text(targetLoot.x, targetLoot.y - 20, 'Collected by party member', {
+      const collectorText = this.add.text(lootSprite.x, lootSprite.y - 20, 
+        `${lootType} collected by ${collectedBy.slice(0, 6)}...`, {
         fontSize: '10px',
         color: '#ffdd88'
       });
       
       this.tweens.add({
         targets: collectorText,
-        y: targetLoot.y - 40,
+        y: lootSprite.y - 40,
         alpha: 0,
         duration: 1200,
-        onComplete: () => {
-          collectorText.destroy();
-        }
+        onComplete: () => collectorText.destroy()
       });
       
-      // Remove loot
-      targetLoot.destroy();
+      // Remove loot sprite
+      lootSprite.destroy();
+      this.lootSprites.delete(lootId);
     }
+  }
+
+  private spawnEnemiesFromServer(enemies: any[]): void {
+    // Spawn enemies from server state
+    enemies.forEach(enemy => {
+      if (!enemy.alive) return; // Don't spawn dead enemies
+      
+      const textureKey = `enemy-${enemy.type}`;
+      
+      // Verify texture exists before creating sprite
+      if (!this.textures.exists(textureKey)) {
+        console.error(`Enemy texture ${textureKey} does not exist! Using default enemy-goblin`);
+        const enemySprite = this.physics.add.sprite(enemy.x, enemy.y, 'enemy-goblin')
+          .setScale(0.6)
+          .setDepth(5)
+          .setTint(0xff4444);
+        
+        enemySprite.setData('enemyId', enemy.id);
+        enemySprite.setData('health', enemy.health);
+        enemySprite.setData('maxHealth', enemy.maxHealth);
+        
+        this.enemies.add(enemySprite);
+        this.enemySprites.set(enemy.id, enemySprite);
+      } else {
+        const enemySprite = this.physics.add.sprite(enemy.x, enemy.y, textureKey)
+          .setScale(0.6)
+          .setDepth(5)
+          .setTint(0xff4444);
+        
+        enemySprite.setData('enemyId', enemy.id);
+        enemySprite.setData('health', enemy.health);
+        enemySprite.setData('maxHealth', enemy.maxHealth);
+        
+        this.enemies.add(enemySprite);
+        this.enemySprites.set(enemy.id, enemySprite);
+      }
+    });
+  }
+
+  private spawnLootFromServer(loot: any[]): void {
+    // Spawn loot from server state
+    loot.forEach(lootItem => {
+      if (lootItem.collected) return; // Don't spawn collected loot
+      
+      let textureKey = `loot-${lootItem.type}`;
+      
+      // Map backend loot types to frontend texture keys
+      if (lootItem.type === 'chest') textureKey = 'loot-chest';
+      else if (lootItem.type === 'potion') textureKey = 'loot-chest'; // Use chest for potion
+      else if (lootItem.type === 'coin') textureKey = 'loot-chest'; // Use chest for coin  
+      else if (lootItem.type === 'gem') textureKey = 'loot-rare_chest'; // Use rare chest for gem
+      else textureKey = 'loot-chest'; // Default fallback
+      
+      // Verify texture exists before creating sprite
+      if (!this.textures.exists(textureKey)) {
+        console.error(`Loot texture ${textureKey} does not exist! Using default loot-chest`);
+        textureKey = 'loot-chest';
+      }
+      
+      const lootSprite = this.physics.add.sprite(lootItem.x, lootItem.y, textureKey)
+        .setScale(0.5)
+        .setDepth(3)
+        .setTint(0xffd700);
+      
+      lootSprite.setData('lootId', lootItem.id);
+      lootSprite.setData('lootType', lootItem.type);
+      
+      this.loot.add(lootSprite);
+      this.lootSprites.set(lootItem.id, lootSprite);
+    });
+  }
+
+  // Combat and interaction handlers
+  private handleCombat(player: any, enemy: any): void {
+    const enemyId = enemy.getData('enemyId');
+    const damage = 10; // Base damage
+    
+    // Send damage to server for synchronization
+    socketService.sendDungeonAction(this.partyId, 'enemy_damage', {
+      enemyId: enemyId,
+      damage: damage
+    });
+  }
+
+  private handleLootCollection(player: any, loot: any): void {
+    const lootId = loot.getData('lootId');
+    
+    // Send loot collection to server for synchronization
+    socketService.sendDungeonAction(this.partyId, 'loot_collect', {
+      lootId: lootId
+    });
+  }
+
+  private handleRemoteAttack(action: GameAction): void {
+    // Handle attack from another player
+    console.log('Remote attack:', action);
+    
+    // Create visual effect at attack location
+    if (action.data.x && action.data.y) {
+      const attackEffect = this.add.circle(action.data.x, action.data.y, 0, 0xff0000, 0.8);
+      this.tweens.add({
+        targets: attackEffect,
+        radius: 20,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => attackEffect.destroy()
+      });
+    }
+  }
+
+  private handleRemoteLoot(action: GameAction): void {
+    // Handle loot collection from another player
+    console.log('Remote loot collection:', action);
   }
 
   private handleRemoteSpell(action: GameAction): void {
