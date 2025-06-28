@@ -630,6 +630,136 @@ export class LootController {
     }
   }
 
+  async transferLootCrossChain(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { 
+        equipmentId,
+        destinationChainId,
+        receiverAddress,
+        senderAddress
+      } = req.body;
+
+      if (!equipmentId || !destinationChainId || !receiverAddress || !senderAddress) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required fields: equipmentId, destinationChainId, receiverAddress, senderAddress' 
+        });
+        return;
+      }
+
+      // Get equipment from database
+      const equipment = await this.getDb().equipment.findUnique({
+        where: { id: equipmentId },
+        include: { owner: true }
+      });
+
+      if (!equipment) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Equipment not found' 
+        });
+        return;
+      }
+
+      // Verify ownership
+      if (equipment.owner.wallet !== senderAddress) {
+        res.status(403).json({ 
+          success: false, 
+          message: 'Not the owner of this equipment' 
+        });
+        return;
+      }
+
+      // For now, assume source chain is Sepolia (11155111)
+      const sourceChainId = 11155111;
+
+      // Initiate cross-chain transfer
+      const transferHash = await blockchainService.transferLootCrossChain(
+        sourceChainId,
+        destinationChainId,
+        equipment.tokenId,
+        receiverAddress
+      );
+
+      // TODO: Add a transfer status table to track cross-chain transfers
+      // For now, just return the transaction hash
+
+      res.json({ 
+        success: true, 
+        data: {
+          transactionHash: transferHash,
+          equipmentId: equipmentId,
+          estimatedArrival: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes estimate
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getCrossChainTransferFee(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { sourceChainId, destinationChainId, equipmentId } = req.query;
+
+      if (!sourceChainId || !destinationChainId || !equipmentId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required parameters: sourceChainId, destinationChainId, equipmentId' 
+        });
+        return;
+      }
+
+      const equipment = await this.getDb().equipment.findUnique({
+        where: { id: String(equipmentId) }
+      });
+
+      if (!equipment) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Equipment not found' 
+        });
+        return;
+      }
+
+      // For now, return a fixed fee estimate
+      // TODO: Implement actual fee calculation using Chainlink CCIP fee estimator
+      const estimatedFee = "1000000000000000000"; // 1 LINK token
+
+      res.json({ 
+        success: true, 
+        data: {
+          fee: estimatedFee,
+          currency: 'LINK',
+          equipmentId,
+          sourceChain: sourceChainId,
+          destinationChain: destinationChainId
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getTransferStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { transferId } = req.params;
+
+      // This would typically query a transfer status service or event logs
+      // For now, return a mock status
+      res.json({ 
+        success: true, 
+        data: {
+          transferId,
+          status: 'PENDING', // PENDING, COMPLETED, FAILED
+          estimatedCompletion: new Date(Date.now() + 10 * 60 * 1000),
+          txHash: '0x...'
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   private generateRandomEquipment(dungeonLevel: number) {
     const equipmentTypes = ['weapon', 'armor', 'accessory', 'consumable'];
     const equipmentType = equipmentTypes[Math.floor(Math.random() * equipmentTypes.length)];

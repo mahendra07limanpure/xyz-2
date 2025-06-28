@@ -4,9 +4,11 @@ import { CONTRACT_ADDRESSES } from '../utils/contractAddresses';
 
 import PartyRegistryJson from '../abi/PartyRegistry.json';
 import LootManagerJson from '../abi/LootManager.json';
+import CrossChainLootManagerJson from '../../../shared/src/abi/CrossChainLootManager.json';
 
 const partyRegistryAbi = PartyRegistryJson as any;
 const lootManagerAbi = LootManagerJson as any;
+const crossChainLootManagerAbi = CrossChainLootManagerJson as any;
 
 const CHAINS = {
   11155111: sepolia,
@@ -14,9 +16,10 @@ const CHAINS = {
 } as const;
 
 export class BlockchainService {
-  private getContractAbi(name: 'LootManager' | 'PartyRegistry') {
+  private getContractAbi(name: 'LootManager' | 'PartyRegistry' | 'CrossChainLootManager') {
     if (name === 'LootManager') return lootManagerAbi;
     if (name === 'PartyRegistry') return partyRegistryAbi;
+    if (name === 'CrossChainLootManager') return crossChainLootManagerAbi;
     throw new Error(`Unknown ABI: ${name}`);
   }
 
@@ -96,6 +99,57 @@ export class BlockchainService {
     });
 
     return hash;
+  }
+
+  // CROSS-CHAIN LOOT MANAGER METHODS
+  async sendLootCrossChain(
+    walletClient: WalletClient,
+    chainId: number,
+    destinationChainSelector: bigint,
+    receiverAddress: string,
+    lootId: number
+  ): Promise<string> {
+    const address = walletClient.account?.address;
+    if (!address) throw new Error('Wallet not connected');
+
+    const hash = await walletClient.writeContract({
+      address: this.getContractAddress(chainId, 'crossChainLootManager'),
+      abi: crossChainLootManagerAbi,
+      functionName: 'sendLootCrossChain',
+      args: [
+        destinationChainSelector,
+        receiverAddress,
+        BigInt(lootId),
+      ],
+      chain: CHAINS[chainId as keyof typeof CHAINS],
+      account: address,
+    });
+
+    return hash;
+  }
+
+  async getCrossChainFee(
+    chainId: number,
+    destinationChainSelector: bigint,
+    receiverAddress: string,
+    lootData: any
+  ): Promise<bigint> {
+    // Note: This would typically be a read operation using useReadContract hook
+    // but including here for completeness
+    throw new Error('Use useReadContract hook for fee estimation');
+  }
+
+  // Helper method to get chain selector for cross-chain operations
+  getChainSelector(chainId: number): bigint {
+    const selectors = {
+      11155111: BigInt('16015286601757825753'), // Ethereum Sepolia
+      80001: BigInt('12532609583862916517'),   // Polygon Mumbai  
+      421613: BigInt('6101244977088475029'),   // Arbitrum Goerli
+    };
+    
+    const selector = selectors[chainId as keyof typeof selectors];
+    if (!selector) throw new Error(`No chain selector for chain ${chainId}`);
+    return selector;
   }
 }
 
