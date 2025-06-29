@@ -5,7 +5,7 @@ export const CONTRACT_ADDRESSES: Record<number, {
   }> = {
     11155111: {
       lootManager: '0xf755e942112584C0547C3f85392B2c2Ee602161B',
-      partyRegistry: '0x93Fd309A0D457174bD94F4c7BCe60c589e6bE4D6',
+      partyRegistry: '0x59a08A222626AefF7f1ae76ceCfC6F6478A51671',
       crossChainLootManager: '0x194CadA5D03EF6Cd9AA51C3BB36EF64F4De174bB',
     },
     80001: {

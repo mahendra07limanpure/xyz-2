@@ -35,6 +35,7 @@ export interface Party {
   currentDungeonId?: string;
   createdAt: Date;
   updatedAt: Date;
+  onchainPartyId: any; // Optional field for on-chain party ID
 }
 
 export interface PartyMember {

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { getDatabase } from '../database/prisma';
 import { blockchainService } from '../services/blockchainService';
 import { logger } from '../utils/logger';
+import { convertBigInt } from '../utils/convertBigInt';
 
 export class PartyController {
   private getDb() {
@@ -10,7 +11,7 @@ export class PartyController {
 
   async createParty(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const {  playerAddress, name, maxSize = 4, chainId = 11155111 } = req.body;
+      const {  playerAddress, name, maxSize = 4, chainId, onchainPartyId  } = req.body;
       const db= getDatabase();
 
       const player = await db.player.findUnique({
@@ -33,6 +34,7 @@ export class PartyController {
           name,
           maxSize,
           chainId,
+          onchainPartyId,
           members: {
             create: {
               playerId,
@@ -54,10 +56,9 @@ export class PartyController {
 
       res.json({ 
         success: true, 
-        data: {
-          ...party
-        }
+        data: this.convertBigInt(party) 
       });
+      
 
     } catch (error) {
       logger.error('Create party error:', error);
@@ -135,8 +136,9 @@ export class PartyController {
 
       res.json({ 
         success: true, 
-        data: member.party 
+        data: this.convertBigInt(member.party) 
       });
+      
 
     } catch (error) {
       logger.error('Join party error:', error);
@@ -242,8 +244,9 @@ export class PartyController {
 
       res.json({ 
         success: true, 
-        data: party 
+        data: this.convertBigInt(party) 
       });
+      
 
     } catch (error) {
       next(error);
@@ -295,8 +298,9 @@ export class PartyController {
 
       res.json({ 
         success: true, 
-        data: membership.party 
+        data: membership ? this.convertBigInt(membership.party) : null 
       });
+      
 
     } catch (error) {
       next(error);
@@ -322,8 +326,9 @@ export class PartyController {
 
       res.json({ 
         success: true, 
-        data: party 
+        data: this.convertBigInt(party) 
       });
+      
 
     } catch (error) {
       next(error);
@@ -334,16 +339,18 @@ export class PartyController {
     try {
       const { partyId } = req.params;
       const { playerId } = req.body;
-
-      // Check if player is the leader
-      const leader = await this.getDb().partyMember.findFirst({
+  
+      const db = this.getDb();
+  
+      // Step 1: Check if player is the leader
+      const leader = await db.partyMember.findFirst({
         where: {
           partyId,
           playerId,
           isLeader: true
         }
       });
-
+  
       if (!leader) {
         res.status(403).json({ 
           success: false, 
@@ -351,33 +358,38 @@ export class PartyController {
         });
         return;
       }
-
-      // Deactivate party
-      await this.getDb().party.update({
-        where: { id: partyId },
-        data: { isActive: false }
+  
+      // Step 2: Delete related partyMembers first (required if Prisma doesn't cascade)
+      await db.partyMember.deleteMany({
+        where: { partyId }
       });
-
+      console.log(`Deleted party members for party ${partyId}`);
+  
+      // Step 3: Delete the party itself
+      await db.party.delete({
+        where: { id: partyId }
+      });
+      console.log(`Deleted party ${partyId}`);
+  
       res.json({ 
         success: true, 
-        message: 'Party disbanded successfully' 
+        message: 'Party fully deleted from backend' 
       });
-
     } catch (error) {
+      console.error('Error during disbandParty:', error);
       next(error);
     }
   }
+  
 
   async getAllAvailableParties(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { limit = 20, offset = 0, excludePlayerId } = req.query;
-
-      // Get all active parties that are not full and not owned by the current player
+  
       let whereClause: any = {
         isActive: true,
       };
-
-      // If excludePlayerId is provided, exclude parties where the player is already a member
+  
       if (excludePlayerId) {
         whereClause.members = {
           none: {
@@ -385,7 +397,7 @@ export class PartyController {
           }
         };
       }
-
+  
       const parties = await this.getDb().party.findMany({
         where: whereClause,
         include: {
@@ -401,20 +413,20 @@ export class PartyController {
         take: Number(limit),
         skip: Number(offset)
       });
-
-      // Filter out full parties
+  
       const availableParties = parties.filter(party => party.members.length < party.maxSize);
-
+  
       res.json({ 
         success: true, 
-        data: availableParties 
+        data: convertBigInt(availableParties)
       });
-
+  
     } catch (error) {
       logger.error('Get available parties error:', error);
       next(error);
     }
   }
+  
 
   async requestToJoinParty(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -508,9 +520,10 @@ export class PartyController {
 
       res.json({ 
         success: true, 
-        data: request,
+        data: this.convertBigInt(request),
         message: 'Request sent successfully' 
       });
+      
 
     } catch (error) {
       logger.error('Request to join party error:', error);
@@ -530,8 +543,10 @@ export class PartyController {
         return;
       }
 
+      const db = getDatabase();
+
       // Get all pending requests for this party
-      const requests = await this.getDb().partyRequest.findMany({
+      const requests = await db.PartyRequest.findMany({
         where: {
           partyId,
           status: 'pending'
@@ -546,8 +561,9 @@ export class PartyController {
 
       res.json({ 
         success: true, 
-        data: requests 
+        data: this.convertBigInt(requests) 
       });
+      
 
     } catch (error) {
       logger.error('Get party requests error:', error);
@@ -662,4 +678,16 @@ export class PartyController {
       next(error);
     }
   }
+
+   convertBigInt(obj: any): any {
+    if (typeof obj === 'bigint') return obj.toString();
+    if (Array.isArray(obj)) return obj.map(this.convertBigInt);
+    if (obj && typeof obj === 'object') {
+      return Object.fromEntries(
+        Object.entries(obj).map(([key, value]) => [key, convertBigInt(value)])
+      );
+    }
+    return obj;
+  }
+  
 }
