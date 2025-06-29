@@ -113,6 +113,7 @@ const PartyPage: React.FC = () => {
         status: PartyStatus.FORMING,
         createdAt: new Date(data.createdAt),
         updatedAt: new Date(data.updatedAt),
+        onchainPartyId: data.onchainPartyId || null,
       };
 
       setCurrentParty(updatedParty);
@@ -177,6 +178,7 @@ const PartyPage: React.FC = () => {
           status: PartyStatus.FORMING,
           createdAt: new Date(partyData.createdAt),
           updatedAt: new Date(partyData.updatedAt),
+          onchainPartyId: partyData.onchainPartyId || null,
         })
       );
 

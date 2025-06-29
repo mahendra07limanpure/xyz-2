@@ -26,21 +26,8 @@ export class GameController {
                       player: true
                     }
                   }
-                },
-                select: {
-                  id: true,
-                  name: true,
-                  maxSize: true,
-                  isActive: true,
-                  onchainPartyId: true, // ✅ Important
-                  members: {
-                    include: {
-                      player: true
-                    }
-                  }
                 }
               }
-              
             }
           },
           equipment: true,

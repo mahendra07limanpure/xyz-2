@@ -5,9 +5,9 @@ import PartyRegistryJson from '../abi/PartyRegistry.json';
 import LootManagerJson from '../abi/LootManager.json';
 import CrossChainLootManagerJson from '../../../shared/src/abi/CrossChainLootManager.json';
 
-const partyRegistryAbi = PartyRegistryJson.abi as Abi;
-const lootManagerAbi = LootManagerJson.abi as Abi;
-const crossChainLootManagerAbi = CrossChainLootManagerJson.abi as Abi;
+const partyRegistryAbi = (PartyRegistryJson as any).abi as Abi;
+const lootManagerAbi = (LootManagerJson as any).abi as Abi;
+const crossChainLootManagerAbi = (CrossChainLootManagerJson as any).abi as Abi;
 
 const CHAINS = {
   11155111: sepolia,
@@ -92,8 +92,8 @@ export class BlockchainService {
   
         console.log("[createParty] Found PartyCreated log:", parsed);
   
-        if (parsed.eventName === "PartyCreated") {
-          partyId = Number(parsed.args.partyId);
+        if ((parsed as any).eventName === "PartyCreated") {
+          partyId = Number((parsed as any).args.partyId);
           break;
         }
       } catch (e) {

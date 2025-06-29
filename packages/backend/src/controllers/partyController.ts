@@ -546,7 +546,7 @@ export class PartyController {
       const db = getDatabase();
 
       // Get all pending requests for this party
-      const requests = await db.PartyRequest.findMany({
+      const requests = await db.partyRequest.findMany({
         where: {
           partyId,
           status: 'pending'
