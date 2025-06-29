@@ -8,9 +8,11 @@ const GameMenu: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="glass-morphism p-8 rounded-lg max-w-md w-full text-center">
-        <h1 className="text-4xl font-bold text-white mb-6 text-glow">
-          🏰 Dungeon Crawler
-        </h1>
+        <img 
+          src="/DungeonX.png" 
+          alt="DungeonX" 
+          className="mx-auto h-16 w-auto object-contain mb-6"
+        />
         <p className="text-gray-300 mb-8">
           Embark on an epic adventure through mystical dungeons filled with treasures and dangers.
         </p>

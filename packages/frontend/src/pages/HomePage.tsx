@@ -6,13 +6,19 @@ const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <h1 className="text-6xl font-bold text-white mb-8 text-glow">
-          Cross-Chain AI Dungeon Crawler
-        </h1>
-        <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-          Embark on epic adventures across multiple blockchains. Form parties, explore dungeons, 
-          collect legendary loot, and interact with AI-powered NPCs in this groundbreaking Web3 RPG.
-        </p>
+        <div className="mb-8">
+          <img 
+            src="/DungeonX.png" 
+            alt="DungeonX" 
+            className="mx-auto h-24 w-auto object-contain mb-4 animate-float"
+          />
+          <h1 className="text-5xl font-bold text-white mb-4 text-glow">
+            Cross-Chain AI Dungeon Crawler
+          </h1>
+          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            Adventure across multiple blockchains, battle AI-powered NPCs, and trade equipment in a decentralized marketplace.
+          </p>
+        </div>
         
         <div className="space-y-6">
           <ConnectButton />
@@ -42,15 +48,15 @@ const HomePage: React.FC = () => {
               <div className="text-4xl mb-4">🤖</div>
               <h3 className="text-xl font-bold text-white mb-2">AI-Powered NPCs</h3>
               <p className="text-gray-300 text-sm">
-                Interact with intelligent NPCs powered by ElizaOS. Every conversation is unique.
+                Interact with intelligent NPCs powered by ElizaOS. Each character has unique personalities and dialogue.
               </p>
             </div>
             
             <div className="glass-morphism p-6 rounded-lg">
               <div className="text-4xl mb-4">💰</div>
-              <h3 className="text-xl font-bold text-white mb-2">DeFi Integration</h3>
+              <h3 className="text-xl font-bold text-white mb-2">DeFi Marketplace</h3>
               <p className="text-gray-300 text-sm">
-                Lend and borrow equipment using DeFi protocols. Earn yield on your legendary items.
+                Lend and borrow equipment using smart contracts. Earn yield on your unused gear.
               </p>
             </div>
           </div>

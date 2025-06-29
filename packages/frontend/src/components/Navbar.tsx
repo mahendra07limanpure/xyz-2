@@ -7,8 +7,12 @@ const Navbar: React.FC = () => {
     <nav className="bg-black/20 backdrop-blur-md border-b border-white/10">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="text-2xl font-bold text-white">
-            🏰 Dungeon Crawler
+        <Link to="/" className="flex items-center space-x-2">
+            <img 
+              src="/DungeonX.png" 
+              alt="DungeonX" 
+              className="h-10 w-auto object-contain hover:scale-105 transition-transform duration-200"
+            />
           </Link>
           
           <div className="hidden md:flex space-x-8">

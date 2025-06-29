@@ -83,6 +83,46 @@ body {
   border-radius: 0.5rem;
 }
 
+/* Logo specific styles */
+.logo-navbar {
+  height: 2.5rem; /* 40px */
+  width: auto;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+.logo-navbar:hover {
+  transform: scale(1.05);
+}
+
+.logo-homepage {
+  height: 6rem; /* 96px */
+  width: auto;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+/* Responsive logo sizing */
+@media (max-width: 768px) {
+  .logo-navbar {
+    height: 2rem; /* 32px on mobile */
+  }
+  
+  .logo-homepage {
+    height: 4rem; /* 64px on mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-navbar {
+    height: 1.75rem; /* 28px on small mobile */
+  }
+  
+  .logo-homepage {
+    height: 3rem; /* 48px on small mobile */
+  }
+}
+
 /* Slider styling for marketplace filters */
 .slider {
   background: linear-gradient(to right, rgb(147, 51, 234) 0%, rgb(147, 51, 234) 50%, rgb(75, 85, 99) 50%, rgb(75, 85, 99) 100%);
