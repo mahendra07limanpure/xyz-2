@@ -103,6 +103,48 @@ const GamePage: React.FC = () => {
         // Handle real-time dungeon actions from other party members
         console.log('Party member action:', data);
       };
+      
+      const handleMultiplayerPlayerJoined = (data: any) => {
+        if (gameMode === 'interactive' && partyMode) {
+          // Add system message when player joins multiplayer game
+          const joinMessage = {
+            playerId: 'system',
+            message: `${data.playerName || data.playerId.slice(0, 6) + '...' + data.playerId.slice(-4)} joined the dungeon`,
+            timestamp: new Date(),
+            type: 'system' as const
+          };
+          setChatMessages(prev => [...prev, joinMessage]);
+          
+          window.dispatchEvent(new CustomEvent('multiplayer:player_joined', { 
+            detail: data 
+          }));
+        }
+      };
+      
+      const handleMultiplayerPlayerLeft = (data: any) => {
+        if (gameMode === 'interactive' && partyMode) {
+          // Add system message when player leaves multiplayer game
+          const leaveMessage = {
+            playerId: 'system',
+            message: `${data.playerName || data.playerId.slice(0, 6) + '...' + data.playerId.slice(-4)} left the dungeon`,
+            timestamp: new Date(),
+            type: 'system' as const
+          };
+          setChatMessages(prev => [...prev, leaveMessage]);
+          
+          window.dispatchEvent(new CustomEvent('multiplayer:player_left', { 
+            detail: data 
+          }));
+        }
+      };
+      
+      const handleMultiplayerLootUpdate = (data: any) => {
+        if (gameMode === 'interactive' && partyMode) {
+          window.dispatchEvent(new CustomEvent('multiplayer:loot_update', { 
+            detail: data 
+          }));
+        }
+      };
 
       // Connect to socket and join party room
       socketService.connect()
@@ -119,6 +161,21 @@ const GamePage: React.FC = () => {
           socketService.on('party:member_disconnected', handleMemberDisconnected);
           socketService.on('chat:message', handleChatMessage);
           socketService.on('dungeon:action', handleDungeonAction);
+          
+          // Only handle multiplayer join/leave for chat notifications
+          socketService.on('multiplayer:player_joined', handleMultiplayerPlayerJoined);
+          socketService.on('multiplayer:player_left', handleMultiplayerPlayerLeft);
+          
+          // If starting in interactive mode, join the multiplayer game
+          if (gameMode === 'interactive') {
+            socketService.joinMultiplayerGame(partyId, {
+              playerId: address,
+              wallet: address,
+              health: state.player?.health || 100,
+              maxHealth: state.player?.maxHealth || 100,
+              level: state.player?.level || 1
+            });
+          }
         })
         .catch(console.error);
         
@@ -129,12 +186,31 @@ const GamePage: React.FC = () => {
         socketService.off('party:member_disconnected', handleMemberDisconnected);
         socketService.off('chat:message', handleChatMessage);
         socketService.off('dungeon:action', handleDungeonAction);
+        socketService.off('multiplayer:player_joined', handleMultiplayerPlayerJoined);
+        socketService.off('multiplayer:player_left', handleMultiplayerPlayerLeft);
+        
         if (partyMode && partyId && address) {
           socketService.leaveParty(partyId, address);
         }
       };
     }
   }, [partyMode, partyId, address]); // Removed isChatOpen from deps to prevent re-registration
+
+  // Handle game mode changes for multiplayer integration
+  useEffect(() => {
+    if (partyMode && partyId && address && socketService.isConnected) {
+      if (gameMode === 'interactive') {
+        // Join multiplayer game when switching to interactive mode
+        socketService.joinMultiplayerGame(partyId, {
+          playerId: address,
+          wallet: address,
+          health: state.player?.health || 100,
+          maxHealth: state.player?.maxHealth || 100,
+          level: state.player?.level || 1
+        });
+      }
+    }
+  }, [gameMode, partyMode, partyId, address, state.player]);
 
   // Keyboard shortcuts for chat
   useEffect(() => {
@@ -384,7 +460,14 @@ const GamePage: React.FC = () => {
     
     return (
       <div className="glass-morphism p-4 rounded-lg mb-4">
-        <h3 className="text-lg font-bold text-white mb-2">🚀 Party Mode</h3>
+        <h3 className="text-lg font-bold text-white mb-2">
+          🚀 Party Mode
+          {gameMode === 'interactive' && (
+            <span className="ml-2 text-sm bg-green-600/20 text-green-300 px-2 py-1 rounded-full">
+              🎮 Multiplayer Active
+            </span>
+          )}
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <h4 className="text-sm font-semibold text-purple-300 mb-1">Party Members ({partyMembers.length})</h4>
@@ -451,11 +534,25 @@ const GamePage: React.FC = () => {
     }
 
     if (gameMode === 'interactive') {
-      return (
-        <div className="relative w-full h-full">
-          <PhaserGame width={800} height={600} />
-        </div>
-      );
+      // Use MultiplayerGame for party mode, PhaserGame for solo
+      if (partyMode && partyId && partyMembers.length > 0) {
+        return (
+          <div className="relative w-full h-full">
+            <MultiplayerGame 
+              width={800} 
+              height={600} 
+              partyId={partyId}
+              partyMembers={partyMembers}
+            />
+          </div>
+        );
+      } else {
+        return (
+          <div className="relative w-full h-full">
+            <PhaserGame width={800} height={600} />
+          </div>
+        );
+      }
     }
 
     // Classic mode
@@ -531,7 +628,7 @@ const GamePage: React.FC = () => {
             <p className="text-sm text-gray-300">
               Traditional turn-based RPG with menu-driven combat and text descriptions. 
               Perfect for strategic gameplay and deeper story immersion.
-              {partyMode && <span className="text-purple-300 block mt-2">🚀 Party support coming soon!</span>}
+              {partyMode && <span className="text-purple-300 block mt-2">🚀 Party chat available - coordinate with your team!</span>}
             </p>
           </div>
           <div className="glass-morphism p-4 rounded-lg">
@@ -539,7 +636,7 @@ const GamePage: React.FC = () => {
             <p className="text-sm text-gray-300">
               Real-time 2D dungeon crawler with direct character control. 
               Move with WASD, explore visually, and engage in dynamic combat.
-              {partyMode && <span className="text-green-300 block mt-2">👥 Full multiplayer support - play together in real-time!</span>}
+              {partyMode && <span className="text-green-300 block mt-2">👥 Full multiplayer support - play together in real-time! See party members move and fight alongside you.</span>}
             </p>
           </div>
         </div>

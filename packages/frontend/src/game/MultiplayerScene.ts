@@ -426,8 +426,12 @@ export class MultiplayerScene extends Phaser.Scene {
 
   private handlePlayerJoined(data: any): void {
     const playerData = data.payload as PlayerData;
+    
     if (playerData.id !== this.playerData.id) {
-      this.createOtherPlayer(playerData);
+      // Check if player already exists to avoid duplicates
+      if (!this.otherPlayers.has(playerData.id)) {
+        this.createOtherPlayer(playerData);
+      }
     }
   }
 

@@ -123,23 +123,15 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
     // Ensure player is joined first, then join multiplayer game
     socketService.joinGame(address, address);
     
-    // Listen for successful player join, then join multiplayer game
-    const handlePlayerJoined = () => {
-      socketService.off('player:joined', handlePlayerJoined);
+    // Add a small delay to ensure the first player is properly initialized
+    const initMultiplayer = setTimeout(() => {
+      console.log('🎮 Joining multiplayer game:', { partyId, playerData });
       socketService.joinMultiplayerGame(partyId, playerData);
-    };
-    
-    socketService.on('player:joined', handlePlayerJoined);
-    
-    // Fallback timeout in case the event doesn't fire
-    const fallbackTimeout = setTimeout(() => {
-      socketService.off('player:joined', handlePlayerJoined);
-      socketService.joinMultiplayerGame(partyId, playerData);
-    }, 1000);
+    }, 500);
 
     // Cleanup function
     return () => {
-      clearTimeout(fallbackTimeout);
+      clearTimeout(initMultiplayer);
       if (phaserGameRef.current) {
         // Leave multiplayer game
         socketService.leaveMultiplayerGame(partyId, address);
@@ -156,15 +148,15 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
       <div ref={gameRef} className="phaser-game border-2 border-purple-500 rounded-lg overflow-hidden" />
       
       {/* Multiplayer UI overlay */}
-      <div className="absolute top-4 left-4 z-10 text-white bg-black bg-opacity-70 p-3 rounded-lg text-sm">
-        <h3 className="font-bold mb-2 text-purple-300">🎮 Multiplayer Dungeon</h3>
-        <div className="space-y-1 text-xs">
+      {/* <div className="absolute top-4 left-4 z-10 text-white bg-black bg-opacity-70 p-3 rounded-lg text-sm"> */}
+        {/* <h3 className="font-bold mb-2 text-purple-300">🎮 Multiplayer Dungeon</h3> */}
+        {/* <div className="space-y-1 text-xs">
           <div>🏃 <strong>Move:</strong> WASD / Arrow Keys</div>
           <div>⚔️ <strong>Combat:</strong> Walk into enemies</div>
           <div>💰 <strong>Loot:</strong> Collect treasure chests</div>
           <div>👥 <strong>Party:</strong> Real-time cooperation</div>
-        </div>
-      </div>
+        </div> */}
+      {/* </div> */}
 
       {/* Party members info */}
       <div className="absolute top-4 right-4 z-10 text-white bg-black bg-opacity-70 p-3 rounded-lg text-sm">
@@ -185,7 +177,7 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
       </div>
 
       {/* Game stats overlay */}
-      <div className="absolute bottom-4 left-4 z-10 text-white bg-black bg-opacity-70 p-3 rounded-lg text-sm">
+      {/* <div className="absolute bottom-4 left-4 z-10 text-white bg-black bg-opacity-70 p-3 rounded-lg text-sm">
         <h3 className="font-bold mb-2 text-green-300">📊 Character</h3>
         <div className="space-y-1 text-xs">
           <div>⭐ Level: {state.player?.level || 1}</div>
@@ -193,10 +185,10 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
           <div>💙 Mana: {state.player?.mana || 50}/{state.player?.maxMana || 50}</div>
           <div>🏰 Floor: {state.dungeonData.currentFloor}</div>
         </div>
-      </div>
+      </div> */}
 
       {/* Features showcase */}
-      <div className="absolute bottom-4 right-4 z-10 text-white bg-black bg-opacity-70 p-3 rounded-lg text-sm max-w-xs">
+      {/* <div className="absolute bottom-4 right-4 z-10 text-white bg-black bg-opacity-70 p-3 rounded-lg text-sm max-w-xs">
         <h3 className="font-bold mb-2 text-yellow-300">🌟 Multiplayer Features</h3>
         <div className="space-y-1 text-xs">
           <div>✅ Real-time party cooperation</div>
@@ -205,7 +197,7 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
           <div>✅ Cross-chain party support</div>
           <div>✅ Leader-coordinated exploration</div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
