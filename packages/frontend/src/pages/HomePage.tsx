@@ -68,15 +68,14 @@ const HomePage: React.FC = () => {
           <div className={`text-center max-w-6xl mx-auto transition-all duration-1000 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             {/* Main Title */}
             <div className="mb-8">
-              <h1 className="font-game text-4xl md:text-7xl font-bold text-white mb-4 leading-tight">
-                <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent animate-glow">
-                  Cross-Chain AI
-                </span>
-                <br />
-                <span className="text-white text-glow">
-                  Dungeon Crawler
-                </span>
-              </h1>
+              <div className="mb-6">
+                <img 
+                  src="/logo.png" 
+                  alt="Cross-Chain AI Dungeon Crawler" 
+                  className="mx-auto h-24 md:h-32 w-auto transition-all duration-300 hover:scale-105"
+                  style={{ filter: 'drop-shadow(0 0 20px rgba(147, 51, 234, 0.8))' }}
+                />
+              </div>
               <div className="w-32 h-1 bg-gradient-to-r from-purple-500 to-cyan-500 mx-auto rounded-full"></div>
             </div>
 
