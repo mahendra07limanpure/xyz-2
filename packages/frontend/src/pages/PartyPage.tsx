@@ -10,10 +10,14 @@ import {
   PARTY_PLAYER_GET_ROUTE,
   PARTY_AVAILABLE_ROUTE,
   GAME_PLAYER_REGISTER_ROUTE,
+  PARTY_DISBAND_ROUTE,
 } from "../utils/routes";
 import { useWalletClient } from "wagmi";
 import { blockchainService } from "../services/blockchainServiceFrontend";
+
 import { getChainName } from "../utils/marketplaceUtils";
+import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains"; // or polygonMumbai/arbitrumGoerli depending on your chainId
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -54,11 +58,14 @@ const PartyPage: React.FC = () => {
   const [partyInvites, setPartyInvites] = useState<PartyInvite[]>([]);
   const [partyRequests, setPartyRequests] = useState<PartyRequest[]>([]);
   const [availableParties, setAvailableParties] = useState<Party[]>([]);
-  const [isLoadingAvailableParties, setIsLoadingAvailableParties] = useState(false);
+  const [isLoadingAvailableParties, setIsLoadingAvailableParties] =
+    useState(false);
   const [isCreatingParty, setIsCreatingParty] = useState(false);
   const [newPartyName, setNewPartyName] = useState("");
   const [maxSize, setMaxSize] = useState(4); // Default max size
   const [chainId, setChainId] = useState(11155111); // Default to Sepolia testnet
+  const [playerRole, setPlayerRole] = useState<PartyRole | null>(null);
+  const [BlockChainPartyId, setBlockChainPartyId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<"current" | "browse" | "invites">(
     "current"
@@ -109,6 +116,10 @@ const PartyPage: React.FC = () => {
       };
 
       setCurrentParty(updatedParty);
+      setPlayerRole(
+        updatedParty.members.find((m) => m.walletAddress === address)?.role ||
+          null
+      );
     } catch (err) {
       console.error("Error fetching player party:", err);
     }
@@ -120,15 +131,15 @@ const PartyPage: React.FC = () => {
     setIsLoadingAvailableParties(true);
     try {
       console.log("Fetching available parties...");
-      
-      let playerId = '';
+
+      let playerId = "";
       try {
         // Get the current player's ID first
         const playerResponse = await apiClient.get(
           `/api/game/player/${address}`
         );
         const playerData = playerResponse.data as ApiResponse<any>;
-        playerId = playerData?.data?.id || '';
+        playerId = playerData?.data?.id || "";
       } catch (err) {
         console.warn("Could not get player ID, fetching all parties:", err);
         // Continue without player ID - we'll get all parties
@@ -138,7 +149,7 @@ const PartyPage: React.FC = () => {
         `${PARTY_AVAILABLE_ROUTE}?excludePlayerId=${playerId}&limit=20`
       );
       console.log("Available parties response:", response);
-      
+
       const apiResponse = response.data as ApiResponse<any[]>;
       if (!apiResponse.success || !apiResponse.data) {
         console.warn("No available parties found");
@@ -146,24 +157,28 @@ const PartyPage: React.FC = () => {
         return;
       }
 
-      const transformedParties: Party[] = apiResponse.data.map((partyData: any) => ({
-        id: partyData.id,
-        name: partyData.name,
-        leaderId: partyData.members.find((m: any) => m.role === "leader")?.player.wallet || "",
-        members: partyData.members.map((m: any) => ({
-          playerId: m.playerId,
-          walletAddress: m.player.wallet,
-          chainId: partyData.chainId,
-          role: m.role,
-          joinedAt: new Date(m.createdAt),
-          isOnline: true,
-        })),
-        maxSize: partyData.maxSize,
-        createdChainId: partyData.chainId,
-        status: PartyStatus.FORMING,
-        createdAt: new Date(partyData.createdAt),
-        updatedAt: new Date(partyData.updatedAt),
-      }));
+      const transformedParties: Party[] = apiResponse.data.map(
+        (partyData: any) => ({
+          id: partyData.id,
+          name: partyData.name,
+          leaderId:
+            partyData.members.find((m: any) => m.role === "leader")?.player
+              .wallet || "",
+          members: partyData.members.map((m: any) => ({
+            playerId: m.playerId,
+            walletAddress: m.player.wallet,
+            chainId: partyData.chainId,
+            role: m.role,
+            joinedAt: new Date(m.createdAt),
+            isOnline: true,
+          })),
+          maxSize: partyData.maxSize,
+          createdChainId: partyData.chainId,
+          status: PartyStatus.FORMING,
+          createdAt: new Date(partyData.createdAt),
+          updatedAt: new Date(partyData.updatedAt),
+        })
+      );
 
       setAvailableParties(transformedParties);
       console.log("Available parties loaded:", transformedParties.length);
@@ -179,9 +194,11 @@ const PartyPage: React.FC = () => {
     if (!currentParty) return;
 
     try {
-      const response = await apiClient.get(`/api/party/${currentParty.id}/requests`);
+      const response = await apiClient.get(
+        `/api/party/${currentParty.id}/requests`
+      );
       const apiResponse = response.data as ApiResponse<PartyRequest[]>;
-      
+
       if (apiResponse.success && apiResponse.data) {
         setPartyRequests(apiResponse.data);
       }
@@ -206,59 +223,65 @@ const PartyPage: React.FC = () => {
       alert("Please enter a party name and connect your wallet.");
       return;
     }
-  
+
     setIsCreatingParty(true);
-  
+
     try {
-      // Step 0: Ensure player is registered in the database
+      // Step 0: Register player in backend (safe to call even if already exists)
       try {
-        await apiClient.post(GAME_PLAYER_REGISTER_ROUTE, {
-          wallet: address,
-        });
-        console.log('Player registration successful or already exists');
+        await apiClient.post(GAME_PLAYER_REGISTER_ROUTE, { wallet: address });
+        console.log("Player registration successful or already exists");
       } catch (err) {
-        console.error('Player registration failed:', err);
-        throw new Error('Failed to register player');
+        console.error("Player registration failed:", err);
+        throw new Error("Failed to register player");
       }
 
-      // Step 1: Register player on-chain (non-blocking, skip if already registered)
+      // Step 1: Register player on-chain (non-blocking)
       try {
         await blockchainService.registerPlayer(walletClient, chainId);
       } catch (err) {
         console.warn("Player may already be registered on-chain:", err);
       }
-  
-      // Step 2: Create party on-chain
+
       const result = await blockchainService.createParty(
         walletClient,
         chainId,
         maxSize
       );
-  
-      // If for some reason the result is null or malformed, skip backend sync
-      if (!result.transactionHash) {
-        throw new Error("Blockchain transaction failed — no party ID or hash.");
-      }
-  
-      setCreatePartytTxHash(result.transactionHash);      // Step 3: Sync with backend
+
+      console.log("Result from createParty:", result);
+      console.log("Tx Hash:", result.transactionHash);
+      console.log("Onchain Party ID:", result.onchainPartyId);
+
+      // ✅ No need to call `createPublicClient` or wait manually
+      console.log(
+        "Party confirmed:",
+        result.transactionHash,
+        result.onchainPartyId
+      );
+      setCreatePartytTxHash(result.transactionHash);
+
+      // Step 4: Sync with backend
       const response = await apiClient.post(PARTY_CREATE_ROUTE, {
         name: newPartyName,
         playerAddress: address,
         maxSize,
         chainId,
+        onchainPartyId: result.onchainPartyId,
       });
 
       const apiResponse = response.data as ApiResponse<any>;
       if (!apiResponse.success || !apiResponse.data) {
-        throw new Error('Failed to create party in backend');
+        throw new Error("Failed to create party in backend");
       }
-      
+
       const data = apiResponse.data;
-  
+
       const newParty: Party = {
         id: data.id,
         name: data.name,
         leaderId: address,
+        onchainPartyId: data.onchainPartyId, // ✅ include it
         members: data.members.map((m: any) => ({
           playerId: m.playerId,
           walletAddress: m.player.wallet,
@@ -273,24 +296,25 @@ const PartyPage: React.FC = () => {
         createdAt: new Date(data.createdAt),
         updatedAt: new Date(data.updatedAt),
       };
-  
+
+      console.log("New party created:", newParty);
+      setBlockChainPartyId(data.onchainPartyId); // Store on-chain ID
       setCurrentParty(newParty);
       setNewPartyName("");
       setActiveTab("current");
-      
-      // Refetch party data to ensure UI is up to date
+
+      // Optional: Refetch for good UI sync
       setTimeout(() => {
         fetchPlayerParty();
-        fetchAvailableParties(); // Also refresh available parties
-      }, 1000); // Small delay to ensure backend is updated
-  
-    } catch (error) {
+        fetchAvailableParties();
+      }, 1000);
+    } catch (error: any) {
       console.error("Error creating party:", error);
+      console.log(error?.message || "Failed to create party");
     } finally {
       setIsCreatingParty(false);
     }
   };
-  
 
   const handleJoinParty = async (partyId: string) => {
     if (!address) {
@@ -310,16 +334,18 @@ const PartyPage: React.FC = () => {
       }
 
       // Send join request
-      const response = await apiClient.post('/api/party/request', {
+      const response = await apiClient.post("/api/party/request", {
         partyId,
         playerId,
-        message: "I'd like to join your party!"
+        message: "I'd like to join your party!",
       });
 
       const apiResponse = response.data as ApiResponse<any>;
-      
+
       if (apiResponse.success) {
-        alert("Request sent successfully! The party leader will review your request.");
+        alert(
+          "Request sent successfully! The party leader will review your request."
+        );
         // Refresh available parties to update UI
         fetchAvailableParties();
       } else {
@@ -342,20 +368,72 @@ const PartyPage: React.FC = () => {
     }
   };
 
+  const handleDisbandParty = async () => {
+    if (!currentParty || !address || !walletClient) {
+      console.warn("Missing required data for disbanding party:", {
+        currentParty,
+        address,
+        walletClient,
+      });
+      return;
+    }
+    console.log("Attempting to disband party:", currentParty);
+    if (!BlockChainPartyId) {
+      alert("Cannot disband party: missing on-chain party ID.");
+      console.error("Missing on-chain party ID in BlockChainPartyId:", BlockChainPartyId);
+      return;
+    }
+  
+    const confirmed = window.confirm("Are you sure you want to disband this party?");
+    console.log("Disband confirmation prompt result:", confirmed);
+    if (!confirmed) return;
+  
+    try {
+      console.log("Starting on-chain disband for party ID:", BlockChainPartyId);
+  
+      const receipt = await blockchainService.deleteParty(
+        walletClient,
+        currentParty.createdChainId,
+        BigInt(BlockChainPartyId)
+      );
+  
+      console.log("✅ On-chain disband transaction confirmed");
+      console.log("Transaction Receipt:", receipt);
+  
+      console.log("Sending DELETE request to backend to disband party:", currentParty.id);
+      await apiClient.delete(
+        PARTY_DISBAND_ROUTE.replace("{partyId}", currentParty.id)
+      );
+      console.log("✅ Party successfully deleted in backend");
+  
+      setCurrentParty(null);
+      console.log("UI state reset: currentParty set to null");
+  
+      alert("Party disbanded successfully!");
+      console.log("Triggering fetchAvailableParties()");
+      fetchAvailableParties();
+    } catch (error: any) {
+      console.error("❌ Disband failed:", error);
+      alert(error?.message || "Failed to disband party");
+    }
+  };
+  
+  
+
   const handleEnterDungeon = () => {
     if (!currentParty) {
       alert("You need to be in a party to enter the dungeon!");
       return;
     }
-    
+
     // Navigate to the game page for multiplayer gameplay
-    navigate("/game", { 
-      state: { 
-        partyMode: true, 
+    navigate("/game", {
+      state: {
+        partyMode: true,
         partyId: currentParty.id,
         partyMembers: currentParty.members,
-        autoStartInteractive: true // Auto-start in interactive mode for multiplayer
-      } 
+        autoStartInteractive: true, // Auto-start in interactive mode for multiplayer
+      },
     });
   };
 
@@ -420,7 +498,7 @@ const PartyPage: React.FC = () => {
               >
                 {isCreatingParty ? "Creating..." : "Create Party"}
               </button>
-              { createPartytTxHash && (
+              {createPartytTxHash && (
                 <div className="text-sm text-gray-400">
                   Transaction Hash:{" "}
                   <a
@@ -433,7 +511,7 @@ const PartyPage: React.FC = () => {
                     {createPartytTxHash.slice(-4)}
                   </a>
                 </div>
-              )}    
+              )}
             </div>
 
             <div className="flex gap-4 justify-center">
@@ -484,12 +562,21 @@ const PartyPage: React.FC = () => {
 
             <div className="flex gap-2 mt-4 sm:mt-0">
               <button className="game-button px-4 py-2">Invite Players</button>
-              <button
-                onClick={handleLeaveParty}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-              >
-                Leave Party
-              </button>
+              {playerRole === "leader" ? (
+                <button
+                  onClick={handleDisbandParty}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  Delete Party
+                </button>
+              ) : (
+                <button
+                  onClick={handleLeaveParty}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  Leave Party
+                </button>
+              )}
             </div>
           </div>
 
@@ -559,13 +646,13 @@ const PartyPage: React.FC = () => {
           {currentParty.status === PartyStatus.FORMING && (
             <div className="mt-6 pt-6 border-t border-gray-700">
               <div className="flex flex-col sm:flex-row gap-4">
-                <button 
+                <button
                   onClick={handleEnterDungeon}
                   className="game-button flex-1 py-3"
                 >
                   🏰 Enter Dungeon
                 </button>
-                <button 
+                <button
                   onClick={handleVisitMarketplace}
                   className="game-button flex-1 py-3"
                 >
@@ -592,10 +679,12 @@ const PartyPage: React.FC = () => {
                   >
                     <div>
                       <h4 className="text-white font-medium">
-                        {request.player.username || formatAddress(request.player.wallet)}
+                        {request.player.username ||
+                          formatAddress(request.player.wallet)}
                       </h4>
                       <div className="text-sm text-gray-400">
-                        Level: {request.player.level || 1} • Requested: {new Date(request.createdAt).toLocaleDateString()}
+                        Level: {request.player.level || 1} • Requested:{" "}
+                        {new Date(request.createdAt).toLocaleDateString()}
                       </div>
                       {request.message && (
                         <div className="text-sm text-gray-300 mt-1 italic">
@@ -605,13 +694,17 @@ const PartyPage: React.FC = () => {
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleRespondToRequest(request.id, 'approve')}
+                        onClick={() =>
+                          handleRespondToRequest(request.id, "approve")
+                        }
                         className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                       >
                         Approve
                       </button>
                       <button
-                        onClick={() => handleRespondToRequest(request.id, 'reject')}
+                        onClick={() =>
+                          handleRespondToRequest(request.id, "reject")
+                        }
                         className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                       >
                         Reject
@@ -634,7 +727,11 @@ const PartyPage: React.FC = () => {
 
         {isLoadingAvailableParties ? (
           <div className="text-center py-8">
-            <div className="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-purple-400 rounded-full" role="status" aria-label="loading"></div>
+            <div
+              className="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-purple-400 rounded-full"
+              role="status"
+              aria-label="loading"
+            ></div>
             <p className="text-gray-400 mt-2">Loading available parties...</p>
           </div>
         ) : availableParties.length === 0 ? (
@@ -716,7 +813,10 @@ const PartyPage: React.FC = () => {
     </div>
   );
 
-  const handleRespondToRequest = async (requestId: string, action: 'approve' | 'reject') => {
+  const handleRespondToRequest = async (
+    requestId: string,
+    action: "approve" | "reject"
+  ) => {
     if (!address || !currentParty) return;
 
     try {
@@ -730,13 +830,16 @@ const PartyPage: React.FC = () => {
         return;
       }
 
-      const response = await apiClient.post(`/api/party/requests/${requestId}/respond`, {
-        action,
-        responderId: playerId
-      });
+      const response = await apiClient.post(
+        `/api/party/requests/${requestId}/respond`,
+        {
+          action,
+          responderId: playerId,
+        }
+      );
 
       const apiResponse = response.data as ApiResponse<any>;
-      
+
       if (apiResponse.success) {
         // Refresh party data and requests
         fetchPlayerParty();

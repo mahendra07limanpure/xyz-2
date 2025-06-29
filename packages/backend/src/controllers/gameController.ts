@@ -3,6 +3,7 @@ import { getDatabase } from '../database/prisma';
 import { logger } from '../utils/logger';
 import { GameState } from '../../../shared/src/types';
 import { Player as SharedPlayer } from '../../../shared/src/types';
+import { convertBigInt } from '../utils/convertBigInt';
 
 export class GameController {
   private getDb() {
@@ -25,8 +26,21 @@ export class GameController {
                       player: true
                     }
                   }
+                },
+                select: {
+                  id: true,
+                  name: true,
+                  maxSize: true,
+                  isActive: true,
+                  onchainPartyId: true, // ✅ Important
+                  members: {
+                    include: {
+                      player: true
+                    }
+                  }
                 }
               }
+              
             }
           },
           equipment: true,
@@ -61,7 +75,7 @@ export class GameController {
         }
       };
 
-      res.json({ success: true, data: gameState });
+      res.json({ success: true, data: convertBigInt(gameState) });
     } catch (error) {
       next(error);
     }
@@ -100,7 +114,7 @@ export class GameController {
         });
       }
   
-      res.json({ success: true, data: player });
+      res.json({ success: true, data: convertBigInt(player) });
     } catch (error) {
       console.error('Error connecting player:', error);
       next(error);
@@ -136,7 +150,7 @@ export class GameController {
         take: 50
       });
 
-      res.json({ success: true, data: players });
+      res.json({ success: true, data: convertBigInt(players) });
     } catch (error) {
       next(error);
     }
@@ -166,7 +180,7 @@ export class GameController {
         return;
       }
 
-      res.json({ success: true, data: player });
+      res.json({ success: true, data: convertBigInt(player) });
     } catch (error) {
       next(error);
     }
@@ -185,7 +199,7 @@ export class GameController {
         }
       });
 
-      res.json({ success: true, data: player });
+      res.json({ success: true, data: convertBigInt(player) });
     } catch (error) {
       next(error);
     }

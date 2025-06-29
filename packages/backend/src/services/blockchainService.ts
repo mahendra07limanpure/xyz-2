@@ -27,6 +27,9 @@ export class BlockchainService {
   private crossChainLootManagerABI: any[];
   private randomLootGeneratorABI: any[];
 
+  
+  
+
   constructor() {
     this.loadABIs();
     this.initializeClients();
@@ -119,6 +122,12 @@ export class BlockchainService {
 
     // Add other networks as needed
     logger.info('Contract addresses loaded');
+  }
+
+  async getPublicClient(chainId: number) {
+    const client = this.publicClients.get(chainId);
+    if (!client) throw new Error(`No public client found for chainId ${chainId}`);
+    return client;
   }
 
   // Loot Management Functions

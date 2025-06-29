@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -31,23 +31,24 @@ model Player {
 }
 
 model Party {
-  id          String   @id @default(cuid())
-  contractPartyId String?
-  name        String?
-  maxSize     Int      @default(4)
-  chainId     Int
-  isActive    Boolean  @default(true)
-  dungeonSeed String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(cuid())
+  onchainPartyId   BigInt?  
+  name             String?
+  maxSize          Int      @default(4)
+  chainId          Int
+  isActive         Boolean  @default(true)
+  dungeonSeed      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relationships
-  members     PartyMember[]
-  requests    PartyRequest[]
-  dungeonRuns DungeonRun[]
+  members          PartyMember[]
+  requests         PartyRequest[]
+  dungeonRuns      DungeonRun[]
 
   @@map("parties")
 }
+
 
 model PartyMember {
   id       String @id @default(cuid())
