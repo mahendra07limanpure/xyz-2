@@ -1,13 +1,15 @@
 import { parseAbiItem, decodeEventLog, WalletClient, PublicClient, createPublicClient, http, Abi } from 'viem';
 import { sepolia, polygonMumbai } from 'viem/chains';
-import { CONTRACT_ADDRESSES } from '../utils/contractAddresses';
-import PartyRegistryJson from '../abi/PartyRegistry.json';
-import LootManagerJson from '../abi/LootManager.json';
+import { CONTRACT_ADDRESSES } from '../config/contractAddresses';
+import PartyRegistryJson from '../../../shared/src/abi/PartyRegistry.json';
+import LootManagerJson from '../../../shared/src/abi/LootManager.json';
 import CrossChainLootManagerJson from '../../../shared/src/abi/CrossChainLootManager.json';
+import RandomLootGeneratorJson from '../../../shared/src/abi/RandomLootGenerator.json';
 
-const partyRegistryAbi = (PartyRegistryJson as any).abi as Abi;
-const lootManagerAbi = (LootManagerJson as any).abi as Abi;
-const crossChainLootManagerAbi = (CrossChainLootManagerJson as any).abi as Abi;
+const partyRegistryAbi = PartyRegistryJson as Abi;
+const lootManagerAbi = LootManagerJson as Abi;
+const crossChainLootManagerAbi = CrossChainLootManagerJson as Abi;
+const randomLootGeneratorAbi = RandomLootGeneratorJson as Abi;
 
 const CHAINS = {
   11155111: sepolia,
@@ -16,10 +18,11 @@ const CHAINS = {
 
 
 export class BlockchainService {
-  private getContractAbi(name: 'LootManager' | 'PartyRegistry' | 'CrossChainLootManager') {
+  private getContractAbi(name: 'LootManager' | 'PartyRegistry' | 'CrossChainLootManager' | 'RandomLootGenerator') {
     if (name === 'LootManager') return lootManagerAbi;
     if (name === 'PartyRegistry') return partyRegistryAbi;
     if (name === 'CrossChainLootManager') return crossChainLootManagerAbi;
+    if (name === 'RandomLootGenerator') return randomLootGeneratorAbi;
     throw new Error(`Unknown ABI: ${name}`);
   }
 
@@ -45,7 +48,7 @@ export class BlockchainService {
   
     console.log("[createParty] Starting writeContract...");
     const transactionHash = await walletClient.writeContract({
-      address: this.getContractAddress(chainId, "partyRegistry"),
+      address: this.getContractAddress(chainId, "PartyRegistry"),
       abi: this.getContractAbi("PartyRegistry"),
       functionName: "createParty",
       args: [BigInt(maxSize)],
@@ -192,7 +195,7 @@ export class BlockchainService {
   private async write(
     walletClient: WalletClient,
     chainId: number,
-    contractName: 'PartyRegistry' | 'LootManager' | 'CrossChainLootManager',
+    contractName: 'PartyRegistry' | 'LootManager' | 'CrossChainLootManager' | 'RandomLootGenerator',
     functionName: string,
     args: any[]
   ): Promise<string> {
@@ -212,7 +215,7 @@ export class BlockchainService {
   private async read(
     publicClient: PublicClient,
     chainId: number,
-    contractName: 'PartyRegistry' | 'LootManager' | 'CrossChainLootManager',
+    contractName: 'PartyRegistry' | 'LootManager' | 'CrossChainLootManager' | 'RandomLootGenerator',
     functionName: string,
     args: any[]
   ): Promise<any> {
@@ -224,14 +227,11 @@ export class BlockchainService {
     });
   }
 
-  private toContractKey(contractName: 'PartyRegistry' | 'LootManager' | 'CrossChainLootManager') {
-    if (contractName === 'PartyRegistry') return 'partyRegistry';
-    if (contractName === 'LootManager') return 'lootManager';
-    if (contractName === 'CrossChainLootManager') return 'crossChainLootManager';
-    throw new Error('Unknown contract key');
+  private toContractKey(contractName: 'PartyRegistry' | 'LootManager' | 'CrossChainLootManager' | 'RandomLootGenerator') {
+    return contractName; // Return as-is since our contract addresses file uses PascalCase
   }
 
-  // ------------------------- LOOT MANAGER (EXISTING) -------------------------
+  // ------------------------- LOOT MANAGER FUNCTIONS -------------------------
 
   async mintLoot(
     walletClient: WalletClient,
@@ -253,7 +253,65 @@ export class BlockchainService {
     ]);
   }
 
-  // ------------------------- CROSS-CHAIN LOOT -------------------------
+  async requestLoot(walletClient: WalletClient, chainId: number, player: string, partyId: number, dungeonLevel: number) {
+    return this.write(walletClient, chainId, 'LootManager', 'requestLoot', [
+      player,
+      BigInt(partyId),
+      BigInt(dungeonLevel),
+    ]);
+  }
+
+  async setLendingStatus(walletClient: WalletClient, chainId: number, tokenId: number, isLendable: boolean) {
+    return this.write(walletClient, chainId, 'LootManager', 'setLendingStatus', [
+      BigInt(tokenId),
+      isLendable,
+    ]);
+  }
+
+  async getEquipment(publicClient: PublicClient, chainId: number, tokenId: number) {
+    return this.read(publicClient, chainId, 'LootManager', 'getEquipment', [BigInt(tokenId)]);
+  }
+
+  async getPlayerEquipment(publicClient: PublicClient, chainId: number, playerAddress: string) {
+    return this.read(publicClient, chainId, 'LootManager', 'getPlayerEquipment', [playerAddress]);
+  }
+
+  async getLoot(publicClient: PublicClient, chainId: number, tokenId: number) {
+    return this.read(publicClient, chainId, 'LootManager', 'getLoot', [BigInt(tokenId)]);
+  }
+
+  async burnLoot(walletClient: WalletClient, chainId: number, tokenId: number) {
+    return this.write(walletClient, chainId, 'LootManager', 'burnLoot', [BigInt(tokenId)]);
+  }
+
+  // ------------------------- RANDOM LOOT GENERATOR FUNCTIONS -------------------------
+
+  async requestRandomLoot(walletClient: WalletClient, chainId: number, player: string, dungeonLevel: number) {
+    return this.write(walletClient, chainId, 'RandomLootGenerator', 'requestRandomLoot', [
+      player,
+      BigInt(dungeonLevel),
+    ]);
+  }
+
+  async getRequestStatus(publicClient: PublicClient, chainId: number, requestId: string) {
+    return this.read(publicClient, chainId, 'RandomLootGenerator', 'getRequestStatus', [requestId]);
+  }
+
+  async updateVRFConfig(
+    walletClient: WalletClient,
+    chainId: number,
+    keyHash: string,
+    callbackGasLimit: number,
+    requestConfirmations: number
+  ) {
+    return this.write(walletClient, chainId, 'RandomLootGenerator', 'updateVRFConfig', [
+      keyHash,
+      callbackGasLimit,
+      requestConfirmations,
+    ]);
+  }
+
+  // ------------------------- CROSS-CHAIN LOOT FUNCTIONS -------------------------
 
   async sendLootCrossChain(
     walletClient: WalletClient,
@@ -269,19 +327,61 @@ export class BlockchainService {
     ]);
   }
 
+  async allowlistDestinationChain(
+    walletClient: WalletClient,
+    chainId: number,
+    destinationChainSelector: bigint,
+    allowed: boolean
+  ) {
+    return this.write(walletClient, chainId, 'CrossChainLootManager', 'allowlistDestinationChain', [
+      destinationChainSelector,
+      allowed,
+    ]);
+  }
+
+  async allowlistSourceChain(
+    walletClient: WalletClient,
+    chainId: number,
+    sourceChainSelector: bigint,
+    allowed: boolean
+  ) {
+    return this.write(walletClient, chainId, 'CrossChainLootManager', 'allowlistSourceChain', [
+      sourceChainSelector,
+      allowed,
+    ]);
+  }
+
+  async getCrossChainFee(
+    publicClient: PublicClient,
+    chainId: number,
+    destinationChainSelector: bigint,
+    receiver: string,
+    data: string
+  ) {
+    return this.read(publicClient, chainId, 'CrossChainLootManager', 'getFee', [
+      destinationChainSelector,
+      receiver,
+      data,
+    ]);
+  }
+
+  async withdrawToken(walletClient: WalletClient, chainId: number, beneficiary: string, token: string) {
+    return this.write(walletClient, chainId, 'CrossChainLootManager', 'withdrawToken', [beneficiary, token]);
+  }
+
+  async withdraw(walletClient: WalletClient, chainId: number, beneficiary: string) {
+    return this.write(walletClient, chainId, 'CrossChainLootManager', 'withdraw', [beneficiary]);
+  }
+
   getChainSelector(chainId: number): bigint {
     const selectors = {
-      11155111: BigInt('16015286601757825753'),
-      80001: BigInt('12532609583862916517'),
-      421613: BigInt('6101244977088475029'),
+      11155111: BigInt('16015286601757825753'), // Ethereum Sepolia
+      80001: BigInt('12532609583862916517'),    // Polygon Mumbai
+      421613: BigInt('6101244977088475029'),    // Arbitrum Goerli
     };
     const selector = selectors[chainId as keyof typeof selectors];
     if (!selector) throw new Error(`No chain selector for chain ${chainId}`);
     return selector;
-  }
-
-  async getCrossChainFee(): Promise<bigint> {
-    throw new Error('Use useReadContract hook for fee estimation');
   }
 }
 

@@ -367,6 +367,324 @@ export class BlockchainService {
     }
   }
 
+  // Random Loot Generation Functions
+  async requestRandomLoot(chainId: number, playerAddress: string, dungeonLevel: number): Promise<{ requestId: string; transactionHash: string }> {
+    try {
+      const walletClient = this.walletClients.get(chainId);
+      const publicClient = this.publicClients.get(chainId);
+      const addresses = this.contractAddresses.get(chainId);
+
+      if (!walletClient || !publicClient || !addresses?.randomLootGenerator) {
+        throw new Error(`Chain ${chainId} not supported or RandomLootGenerator address missing`);
+      }
+
+      const hash = await walletClient.writeContract({
+        address: addresses.randomLootGenerator as `0x${string}`,
+        abi: this.randomLootGeneratorABI,
+        functionName: 'requestRandomLoot',
+        args: [playerAddress as `0x${string}`, BigInt(dungeonLevel)]
+      });
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      
+      // Extract requestId from logs (simplified for now)
+      const requestId = Math.floor(Math.random() * 1000000).toString();
+
+      logger.info(`Random loot requested for player: ${playerAddress}`, {
+        chainId,
+        dungeonLevel,
+        requestId,
+        transactionHash: hash
+      });
+
+      return {
+        requestId,
+        transactionHash: hash
+      };
+    } catch (error) {
+      logger.error('Error requesting random loot:', error);
+      throw error;
+    }
+  }
+
+  async getRequestStatus(chainId: number, requestId: string): Promise<{ fulfilled: boolean; randomWords: bigint[] }> {
+    try {
+      const publicClient = this.publicClients.get(chainId);
+      const addresses = this.contractAddresses.get(chainId);
+
+      if (!publicClient || !addresses?.randomLootGenerator) {
+        throw new Error(`Chain ${chainId} not supported`);
+      }
+
+      const result = await publicClient.readContract({
+        address: addresses.randomLootGenerator as `0x${string}`,
+        abi: this.randomLootGeneratorABI,
+        functionName: 'getRequestStatus',
+        args: [requestId]
+      });
+
+      return {
+        fulfilled: result[0] as boolean,
+        randomWords: result[1] as bigint[]
+      };
+    } catch (error) {
+      logger.error('Error getting request status:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced Loot Management Functions
+  async requestLoot(chainId: number, playerAddress: string, partyId: bigint, dungeonLevel: number): Promise<{ requestId: string; transactionHash: string }> {
+    try {
+      const walletClient = this.walletClients.get(chainId);
+      const publicClient = this.publicClients.get(chainId);
+      const addresses = this.contractAddresses.get(chainId);
+
+      if (!walletClient || !publicClient || !addresses?.lootManager) {
+        throw new Error(`Chain ${chainId} not supported or LootManager address missing`);
+      }
+
+      const hash = await walletClient.writeContract({
+        address: addresses.lootManager as `0x${string}`,
+        abi: this.lootManagerABI,
+        functionName: 'requestLoot',
+        args: [playerAddress as `0x${string}`, partyId, BigInt(dungeonLevel)]
+      });
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      
+      // Extract requestId from logs (simplified for now)
+      const requestId = Math.floor(Math.random() * 1000000).toString();
+
+      logger.info(`Loot requested for player: ${playerAddress}`, {
+        chainId,
+        partyId: partyId.toString(),
+        dungeonLevel,
+        requestId,
+        transactionHash: hash
+      });
+
+      return {
+        requestId,
+        transactionHash: hash
+      };
+    } catch (error) {
+      logger.error('Error requesting loot:', error);
+      throw error;
+    }
+  }
+
+  async setLendingStatus(chainId: number, tokenId: bigint, isLendable: boolean): Promise<string> {
+    try {
+      const walletClient = this.walletClients.get(chainId);
+      const addresses = this.contractAddresses.get(chainId);
+
+      if (!walletClient || !addresses?.lootManager) {
+        throw new Error(`Chain ${chainId} not supported`);
+      }
+
+      const hash = await walletClient.writeContract({
+        address: addresses.lootManager as `0x${string}`,
+        abi: this.lootManagerABI,
+        functionName: 'setLendingStatus',
+        args: [tokenId, isLendable]
+      });
+
+      logger.info(`Lending status updated for token: ${tokenId}`, {
+        chainId,
+        tokenId: tokenId.toString(),
+        isLendable,
+        transactionHash: hash
+      });
+
+      return hash;
+    } catch (error) {
+      logger.error('Error setting lending status:', error);
+      throw error;
+    }
+  }
+
+  async burnLoot(chainId: number, tokenId: bigint): Promise<string> {
+    try {
+      const walletClient = this.walletClients.get(chainId);
+      const addresses = this.contractAddresses.get(chainId);
+
+      if (!walletClient || !addresses?.lootManager) {
+        throw new Error(`Chain ${chainId} not supported`);
+      }
+
+      const hash = await walletClient.writeContract({
+        address: addresses.lootManager as `0x${string}`,
+        abi: this.lootManagerABI,
+        functionName: 'burnLoot',
+        args: [tokenId]
+      });
+
+      logger.info(`Loot burned: ${tokenId}`, {
+        chainId,
+        tokenId: tokenId.toString(),
+        transactionHash: hash
+      });
+
+      return hash;
+    } catch (error) {
+      logger.error('Error burning loot:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced Cross-Chain Functions
+  async getCrossChainFee(
+    sourceChainId: number,
+    destinationChainSelector: string,
+    receiverAddress: string,
+    lootData: any
+  ): Promise<bigint> {
+    try {
+      const publicClient = this.publicClients.get(sourceChainId);
+      const addresses = this.contractAddresses.get(sourceChainId);
+
+      if (!publicClient || !addresses?.crossChainLootManager) {
+        throw new Error(`Chain ${sourceChainId} not supported`);
+      }
+
+      const fee = await publicClient.readContract({
+        address: addresses.crossChainLootManager as `0x${string}`,
+        abi: this.crossChainLootManagerABI,
+        functionName: 'getFee',
+        args: [
+          destinationChainSelector as `0x${string}`,
+          receiverAddress as `0x${string}`,
+          JSON.stringify(lootData)
+        ]
+      });
+
+      return fee as bigint;
+    } catch (error) {
+      logger.error('Error getting cross-chain fee:', error);
+      throw error;
+    }
+  }
+
+  async allowlistDestinationChain(chainId: number, destinationChainSelector: string, allowed: boolean): Promise<string> {
+    try {
+      const walletClient = this.walletClients.get(chainId);
+      const addresses = this.contractAddresses.get(chainId);
+
+      if (!walletClient || !addresses?.crossChainLootManager) {
+        throw new Error(`Chain ${chainId} not supported`);
+      }
+
+      const hash = await walletClient.writeContract({
+        address: addresses.crossChainLootManager as `0x${string}`,
+        abi: this.crossChainLootManagerABI,
+        functionName: 'allowlistDestinationChain',
+        args: [destinationChainSelector as `0x${string}`, allowed]
+      });
+
+      logger.info(`Destination chain allowlist updated`, {
+        chainId,
+        destinationChainSelector,
+        allowed,
+        transactionHash: hash
+      });
+
+      return hash;
+    } catch (error) {
+      logger.error('Error updating destination chain allowlist:', error);
+      throw error;
+    }
+  }
+
+  async allowlistSourceChain(chainId: number, sourceChainSelector: string, allowed: boolean): Promise<string> {
+    try {
+      const walletClient = this.walletClients.get(chainId);
+      const addresses = this.contractAddresses.get(chainId);
+
+      if (!walletClient || !addresses?.crossChainLootManager) {
+        throw new Error(`Chain ${chainId} not supported`);
+      }
+
+      const hash = await walletClient.writeContract({
+        address: addresses.crossChainLootManager as `0x${string}`,
+        abi: this.crossChainLootManagerABI,
+        functionName: 'allowlistSourceChain',
+        args: [sourceChainSelector as `0x${string}`, allowed]
+      });
+
+      logger.info(`Source chain allowlist updated`, {
+        chainId,
+        sourceChainSelector,
+        allowed,
+        transactionHash: hash
+      });
+
+      return hash;
+    } catch (error) {
+      logger.error('Error updating source chain allowlist:', error);
+      throw error;
+    }
+  }
+
+  async withdrawToken(chainId: number, beneficiary: string, tokenAddress: string): Promise<string> {
+    try {
+      const walletClient = this.walletClients.get(chainId);
+      const addresses = this.contractAddresses.get(chainId);
+
+      if (!walletClient || !addresses?.crossChainLootManager) {
+        throw new Error(`Chain ${chainId} not supported`);
+      }
+
+      const hash = await walletClient.writeContract({
+        address: addresses.crossChainLootManager as `0x${string}`,
+        abi: this.crossChainLootManagerABI,
+        functionName: 'withdrawToken',
+        args: [beneficiary as `0x${string}`, tokenAddress as `0x${string}`]
+      });
+
+      logger.info(`Token withdrawal initiated`, {
+        chainId,
+        beneficiary,
+        tokenAddress,
+        transactionHash: hash
+      });
+
+      return hash;
+    } catch (error) {
+      logger.error('Error withdrawing token:', error);
+      throw error;
+    }
+  }
+
+  async withdraw(chainId: number, beneficiary: string): Promise<string> {
+    try {
+      const walletClient = this.walletClients.get(chainId);
+      const addresses = this.contractAddresses.get(chainId);
+
+      if (!walletClient || !addresses?.crossChainLootManager) {
+        throw new Error(`Chain ${chainId} not supported`);
+      }
+
+      const hash = await walletClient.writeContract({
+        address: addresses.crossChainLootManager as `0x${string}`,
+        abi: this.crossChainLootManagerABI,
+        functionName: 'withdraw',
+        args: [beneficiary as `0x${string}`]
+      });
+
+      logger.info(`ETH withdrawal initiated`, {
+        chainId,
+        beneficiary,
+        transactionHash: hash
+      });
+
+      return hash;
+    } catch (error) {
+      logger.error('Error withdrawing ETH:', error);
+      throw error;
+    }
+  }
+
   // Utility Functions
   private extractTokenIdFromLogs(logs: any[]): bigint {
     // Look for Transfer event or EquipmentCreated event

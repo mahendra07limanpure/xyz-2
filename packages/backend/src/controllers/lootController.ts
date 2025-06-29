@@ -760,6 +760,209 @@ export class LootController {
     }
   }
 
+  // New enhanced loot functions
+  async requestRandomLoot(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { playerAddress, dungeonLevel = 1, chainId = 11155111 } = req.body;
+
+      if (!playerAddress) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required field: playerAddress' 
+        });
+        return;
+      }
+
+      const result = await blockchainService.requestRandomLoot(chainId, playerAddress, dungeonLevel);
+
+      res.json({
+        success: true,
+        data: {
+          requestId: result.requestId,
+          transactionHash: result.transactionHash,
+          message: 'Random loot request submitted successfully'
+        }
+      });
+
+      logger.info(`Random loot requested`, { playerAddress, dungeonLevel, chainId, requestId: result.requestId });
+    } catch (error) {
+      logger.error('Error requesting random loot:', error);
+      next(error);
+    }
+  }
+
+  async getRequestStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { requestId, chainId = 11155111 } = req.params;
+
+      if (!requestId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required parameter: requestId' 
+        });
+        return;
+      }
+
+      const status = await blockchainService.getRequestStatus(Number(chainId), requestId);
+
+      res.json({
+        success: true,
+        data: {
+          requestId,
+          fulfilled: status.fulfilled,
+          randomWords: status.randomWords.map(word => word.toString())
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting request status:', error);
+      next(error);
+    }
+  }
+
+  async requestLoot(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { playerAddress, partyId, dungeonLevel = 1, chainId = 11155111 } = req.body;
+
+      if (!playerAddress || !partyId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required fields: playerAddress, partyId' 
+        });
+        return;
+      }
+
+      const result = await blockchainService.requestLoot(chainId, playerAddress, BigInt(partyId), dungeonLevel);
+
+      res.json({
+        success: true,
+        data: {
+          requestId: result.requestId,
+          transactionHash: result.transactionHash,
+          message: 'Loot request submitted successfully'
+        }
+      });
+
+      logger.info(`Loot requested`, { playerAddress, partyId, dungeonLevel, chainId, requestId: result.requestId });
+    } catch (error) {
+      logger.error('Error requesting loot:', error);
+      next(error);
+    }
+  }
+
+  async setLendingStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { tokenId, isLendable, chainId = 11155111 } = req.body;
+
+      if (!tokenId || typeof isLendable !== 'boolean') {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required fields: tokenId, isLendable' 
+        });
+        return;
+      }
+
+      const transactionHash = await blockchainService.setLendingStatus(chainId, BigInt(tokenId), isLendable);
+
+      // Update database
+      await this.getDb().equipment.update({
+        where: { tokenId: tokenId.toString() },
+        data: { isLendable }
+      });
+
+      res.json({
+        success: true,
+        data: {
+          tokenId,
+          isLendable,
+          transactionHash,
+          message: 'Lending status updated successfully'
+        }
+      });
+
+      logger.info(`Lending status updated`, { tokenId, isLendable, chainId, transactionHash });
+    } catch (error) {
+      logger.error('Error setting lending status:', error);
+      next(error);
+    }
+  }
+
+  async burnLoot(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { tokenId, chainId = 11155111 } = req.body;
+
+      if (!tokenId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required field: tokenId' 
+        });
+        return;
+      }
+
+      const transactionHash = await blockchainService.burnLoot(chainId, BigInt(tokenId));
+
+      // Update database - mark as inactive since we don't have isBurned field
+      await this.getDb().equipment.update({
+        where: { tokenId: tokenId.toString() },
+        data: { 
+          // We can use name to indicate it's burned or add a status field later
+          name: `[BURNED] ${(await this.getDb().equipment.findUnique({ where: { tokenId: tokenId.toString() } }))?.name || 'Equipment'}`,
+          updatedAt: new Date()
+        }
+      });
+
+      res.json({
+        success: true,
+        data: {
+          tokenId,
+          transactionHash,
+          message: 'Loot burned successfully'
+        }
+      });
+
+      logger.info(`Loot burned`, { tokenId, chainId, transactionHash });
+    } catch (error) {
+      logger.error('Error burning loot:', error);
+      next(error);
+    }
+  }
+
+  async getCrossChainFee(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { 
+        sourceChainId = 11155111, 
+        destinationChainSelector, 
+        receiverAddress, 
+        lootData 
+      } = req.body;
+
+      if (!destinationChainSelector || !receiverAddress || !lootData) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Missing required fields: destinationChainSelector, receiverAddress, lootData' 
+        });
+        return;
+      }
+
+      const fee = await blockchainService.getCrossChainFee(
+        sourceChainId, 
+        destinationChainSelector, 
+        receiverAddress, 
+        lootData
+      );
+
+      res.json({
+        success: true,
+        data: {
+          fee: fee.toString(),
+          feeInEth: (Number(fee) / 1e18).toFixed(6)
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting cross-chain fee:', error);
+      next(error);
+    }
+  }
+
   private generateRandomEquipment(dungeonLevel: number) {
     const equipmentTypes = ['weapon', 'armor', 'accessory', 'consumable'];
     const equipmentType = equipmentTypes[Math.floor(Math.random() * equipmentTypes.length)];

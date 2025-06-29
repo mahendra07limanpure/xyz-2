@@ -15,6 +15,7 @@ import GamePage from './pages/GamePage';
 import PartyPage from './pages/PartyPage';
 import MarketplacePage from './pages/MarketplacePage';
 import ProfilePage from './pages/ProfilePage';
+import DashboardPage from './pages/DashboardPage';
 import '@rainbow-me/rainbowkit/styles.css';
 import './App.css';
 
@@ -55,6 +56,7 @@ const AppContent: React.FC = () => {
             <Route path="/party" element={<PartyPage />} />
             <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
           </Routes>
         </main>
         <GameInstructions />

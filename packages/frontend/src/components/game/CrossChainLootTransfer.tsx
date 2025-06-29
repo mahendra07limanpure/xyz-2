@@ -1,153 +1,263 @@
-import React, { useState } from 'react';
-import { useAccount, useWalletClient } from 'wagmi';
+import React, { useState, useEffect } from 'react';
+import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { blockchainService } from '../../services/blockchainServiceFrontend';
+import { mockDataService, MockEquipment } from '../../services/mockDataService';
+import LoadingSpinner from '../LoadingSpinner';
 
-interface LootItem {
-  id: number;
+interface Equipment {
+  tokenId: string;
   name: string;
-  type: string;
-  rarity: number;
-  power: number;
-  chainId: number;
+  equipmentType: string;
+  rarity: string;
+  attackPower: number;
 }
 
-interface CrossChainLootTransferProps {
-  lootItems: LootItem[];
-  onTransferComplete?: (txHash: string) => void;
-}
+const SUPPORTED_CHAINS = {
+  11155111: { name: 'Ethereum Sepolia', icon: '⟠' },
+  80001: { name: 'Polygon Mumbai', icon: '⬟' },
+  421613: { name: 'Arbitrum Goerli', icon: '🔵' },
+};
 
-const CrossChainLootTransfer: React.FC<CrossChainLootTransferProps> = ({
-  lootItems,
-  onTransferComplete
-}) => {
-  const { address } = useAccount();
+const CrossChainLootTransfer: React.FC = () => {
+  const { address, chainId } = useAccount();
+  const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
-  const [selectedLoot, setSelectedLoot] = useState<LootItem | null>(null);
-  const [destinationChain, setDestinationChain] = useState<number>(11155111);
-  const [receiverAddress, setReceiverAddress] = useState<string>('');
-  const [isTransferring, setIsTransferring] = useState(false);
-  const [transferStatus, setTransferStatus] = useState<string>('');
 
-  const chainNames = {
-    11155111: 'Sepolia Testnet',
-    80001: 'Polygon Mumbai',
-    421613: 'Arbitrum Goerli',
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<string>('');
+  const [destinationChain, setDestinationChain] = useState<number>(80001);
+  const [receiverAddress, setReceiverAddress] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (address && publicClient && chainId) {
+      loadPlayerEquipment();
+    }
+  }, [address, publicClient, chainId]);
+
+  const loadPlayerEquipment = async () => {
+    try {
+      if (!address || !publicClient || !chainId) {
+        // Load mock data when no wallet connected
+        const mockEquipment = await mockDataService.getPlayerEquipment('mock-address');
+        setEquipment(mockEquipment.map(eq => ({
+          tokenId: eq.tokenId,
+          name: eq.name,
+          equipmentType: eq.equipmentType,
+          rarity: eq.rarity,
+          attackPower: eq.attackPower
+        })));
+        return;
+      }
+
+      const tokenIds = await blockchainService.getPlayerEquipment(publicClient, chainId, address);
+      
+      const equipmentDetails = await Promise.all(
+        tokenIds.map(async (tokenId: bigint) => {
+          try {
+            const equipment = await blockchainService.getEquipment(publicClient, chainId, Number(tokenId));
+            return {
+              tokenId: tokenId.toString(),
+              name: equipment.name,
+              equipmentType: equipment.lootType,
+              rarity: ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'][equipment.rarity] || 'common',
+              attackPower: Number(equipment.attackPower || equipment.power),
+            };
+          } catch (err) {
+            return null;
+          }
+        })
+      );
+
+      const validEquipment = equipmentDetails.filter(Boolean) as Equipment[];
+      
+      // If no blockchain equipment, use mock data
+      if (validEquipment.length === 0) {
+        const mockEquipment = await mockDataService.getPlayerEquipment(address);
+        setEquipment(mockEquipment.map(eq => ({
+          tokenId: eq.tokenId,
+          name: eq.name,
+          equipmentType: eq.equipmentType,
+          rarity: eq.rarity,
+          attackPower: eq.attackPower
+        })));
+      } else {
+        setEquipment(validEquipment);
+      }
+      
+    } catch (err) {
+      console.error('Error loading equipment:', err);
+      setError('Failed to load equipment. Loading mock data...');
+      
+      // Fallback to mock data
+      try {
+        const mockEquipment = await mockDataService.getPlayerEquipment(address || 'mock-address');
+        setEquipment(mockEquipment.map(eq => ({
+          tokenId: eq.tokenId,
+          name: eq.name,
+          equipmentType: eq.equipmentType,
+          rarity: eq.rarity,
+          attackPower: eq.attackPower
+        })));
+        setError(null);
+      } catch (mockError) {
+        setError('Failed to load equipment data');
+      }
+    }
   };
 
   const handleTransfer = async () => {
-    if (!selectedLoot || !receiverAddress || !walletClient || !address) {
-      setTransferStatus('Please fill all fields and connect wallet');
+    if (!walletClient || !chainId || !selectedEquipment || !destinationChain || !receiverAddress) {
+      setError('Please fill in all fields');
       return;
     }
 
-    setIsTransferring(true);
-    setTransferStatus('Initiating cross-chain transfer...');
-
     try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
       const destinationChainSelector = blockchainService.getChainSelector(destinationChain);
       
-      const txHash = await blockchainService.sendLootCrossChain(
+      const transactionHash = await blockchainService.sendLootCrossChain(
         walletClient,
-        selectedLoot.chainId,
+        chainId,
         destinationChainSelector,
-        receiverAddress,
-        selectedLoot.id
+        receiverAddress as `0x${string}`,
+        Number(selectedEquipment)
       );
 
-      setTransferStatus(`Transfer initiated! TX: ${txHash.slice(0, 8)}...`);
-      onTransferComplete?.(txHash);
+      setSuccess(`Cross-chain transfer initiated! Transaction: ${transactionHash.slice(0, 10)}...`);
       
-      // Reset form
-      setSelectedLoot(null);
+      // Clear form
+      setSelectedEquipment('');
       setReceiverAddress('');
-    } catch (error) {
-      console.error('Cross-chain transfer failed:', error);
-      setTransferStatus(`Transfer failed: ${error.message}`);
+      
+      // Reload equipment
+      loadPlayerEquipment();
+
+    } catch (err: any) {
+      console.error('Error transferring loot:', err);
+      setError(err.message || 'Failed to transfer loot');
     } finally {
-      setIsTransferring(false);
+      setLoading(false);
     }
   };
 
+  const getChainInfo = (chainId: number) => {
+    return SUPPORTED_CHAINS[chainId as keyof typeof SUPPORTED_CHAINS] || { name: `Chain ${chainId}`, icon: '🔗' };
+  };
+
   return (
-    <div className="glass-morphism p-6 rounded-lg">
-      <h3 className="text-xl font-bold text-white mb-4">🌐 Cross-Chain Loot Transfer</h3>
-      
-      <div className="space-y-4">
-        {/* Loot Selection */}
+    <div className="bg-gray-800 rounded-lg p-6 space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-white mb-2">🌐 Cross-Chain Loot Transfer</h2>
+        <p className="text-gray-400">Transfer your equipment to other blockchain networks</p>
+      </div>
+
+      <div className="bg-gray-700 rounded-lg p-4 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Select Loot Item
+          <label className="block text-white font-semibold mb-2">
+            Select Equipment to Transfer
           </label>
-          <select
-            value={selectedLoot?.id || ''}
-            onChange={(e) => {
-              const loot = lootItems.find(item => item.id === Number(e.target.value));
-              setSelectedLoot(loot || null);
-            }}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-          >
-            <option value="">Choose a loot item...</option>
-            {lootItems.map(item => (
-              <option key={item.id} value={item.id}>
-                {item.name} (Power: {item.power}, Chain: {chainNames[item.chainId] || item.chainId})
-              </option>
-            ))}
-          </select>
+          {equipment.length === 0 ? (
+            <p className="text-gray-400 text-center py-4">No equipment available</p>
+          ) : (
+            <select
+              value={selectedEquipment}
+              onChange={(e) => setSelectedEquipment(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-600 text-white rounded-lg border border-gray-500 focus:border-blue-500"
+            >
+              <option value="">Choose equipment...</option>
+              {equipment.map((item) => (
+                <option key={item.tokenId} value={item.tokenId}>
+                  {item.name} ({item.equipmentType}) - Power: {item.attackPower}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
-        {/* Destination Chain */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Destination Chain
-          </label>
-          <select
-            value={destinationChain}
-            onChange={(e) => setDestinationChain(Number(e.target.value))}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-          >
-            <option value={11155111}>Sepolia Testnet</option>
-            <option value={80001}>Polygon Mumbai</option>
-            <option value={421613}>Arbitrum Goerli</option>
-          </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-white font-semibold mb-2">From Chain</label>
+            <div className="px-3 py-2 bg-gray-600 text-white rounded-lg border border-gray-500">
+              {getChainInfo(chainId || 11155111).icon} {getChainInfo(chainId || 11155111).name}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-white font-semibold mb-2">To Chain</label>
+            <select
+              value={destinationChain}
+              onChange={(e) => setDestinationChain(Number(e.target.value))}
+              className="w-full px-3 py-2 bg-gray-600 text-white rounded-lg border border-gray-500 focus:border-blue-500"
+            >
+              {Object.entries(SUPPORTED_CHAINS)
+                .filter(([id]) => Number(id) !== chainId)
+                .map(([id, info]) => (
+                  <option key={id} value={id}>
+                    {info.icon} {info.name}
+                  </option>
+                ))}
+            </select>
+          </div>
         </div>
 
-        {/* Receiver Address */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Receiver Address
-          </label>
+          <label className="block text-white font-semibold mb-2">Receiver Address</label>
           <input
             type="text"
             value={receiverAddress}
             onChange={(e) => setReceiverAddress(e.target.value)}
             placeholder="0x..."
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+            className="w-full px-3 py-2 bg-gray-600 text-white rounded-lg border border-gray-500 focus:border-blue-500"
           />
+          <button
+            onClick={() => setReceiverAddress(address || '')}
+            className="mt-2 text-sm text-blue-400 hover:text-blue-300"
+          >
+            Use my address
+          </button>
         </div>
 
-        {/* Transfer Button */}
         <button
           onClick={handleTransfer}
-          disabled={isTransferring || !selectedLoot || !receiverAddress}
-          className="w-full game-button py-3 disabled:opacity-50"
+          disabled={loading || !selectedEquipment || !receiverAddress}
+          className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white font-bold rounded-lg hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
-          {isTransferring ? 'Transferring...' : 'Transfer Cross-Chain'}
+          {loading ? (
+            <div className="flex items-center justify-center space-x-2">
+              <LoadingSpinner size="sm" />
+              <span>Transferring...</span>
+            </div>
+          ) : (
+            'Transfer Cross-Chain'
+          )}
         </button>
 
-        {/* Status */}
-        {transferStatus && (
-          <div className="p-3 bg-gray-800 rounded-lg">
-            <p className="text-sm text-gray-300">{transferStatus}</p>
+        {error && (
+          <div className="bg-red-900/20 border border-red-600 rounded-lg p-3">
+            <p className="text-red-400">{error}</p>
           </div>
         )}
 
-        {/* Info */}
-        <div className="text-xs text-gray-400 space-y-1">
-          <p>• Cross-chain transfers use Chainlink CCIP</p>
-          <p>• Loot will be burned on source chain and minted on destination</p>
-          <p>• Transfer fees are paid in LINK tokens</p>
-          <p>• Transfers may take a few minutes to complete</p>
-        </div>
+        {success && (
+          <div className="bg-green-900/20 border border-green-600 rounded-lg p-3">
+            <p className="text-green-400">{success}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4">
+        <h4 className="text-yellow-400 font-semibold mb-2">Important Notes:</h4>
+        <ul className="text-sm text-yellow-300 space-y-1">
+          <li>• Cross-chain transfers are powered by Chainlink CCIP</li>
+          <li>• Equipment will be burned on the source chain and minted on destination</li>
+          <li>• Ensure the receiver address is correct - transfers cannot be reversed</li>
+        </ul>
       </div>
     </div>
   );
