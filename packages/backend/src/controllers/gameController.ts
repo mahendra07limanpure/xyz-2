@@ -70,7 +70,7 @@ export class GameController {
 
   async connectPlayer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { wallet } = req.body;
+      const { wallet, username } = req.body;
   
       if (!wallet) {
         res.status(400).json({ success: false, message: 'Wallet is required' });
@@ -82,21 +82,32 @@ export class GameController {
       let player = await db.player.findUnique({ where: { wallet } });
   
       if (player) {
-        // Reactivate existing player
+        // Update existing player (reactivate and optionally update username)
+        const updateData: any = { isActive: true };
+        if (username && username !== player.username) {
+          updateData.username = username;
+        }
+        
         player = await db.player.update({
           where: { id: player.id },
-          data: { isActive: true },
+          data: updateData,
           include: { gameStats: true }
         });
       } else {
-        // Create new player with default game stats
+        // Create new player with default game stats and optional username
+        const createData: any = {
+          wallet,
+          gameStats: {
+            create: {}
+          }
+        };
+        
+        if (username) {
+          createData.username = username;
+        }
+        
         player = await db.player.create({
-          data: {
-            wallet,
-            gameStats: {
-              create: {}
-            }
-          },
+          data: createData,
           include: { gameStats: true }
         });
       }
@@ -106,7 +117,6 @@ export class GameController {
       console.error('Error connecting player:', error);
       next(error);
     }
-
   }
   
 
